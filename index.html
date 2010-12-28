@@ -10,23 +10,23 @@
 	<style type="text/css">
 		body {
   		margin-top: 1.0em;
-  		background-color: #e47474;
+  		background-color: #cce6ff;
 		  font-family: "Helvetica,Arial,FreeSans";
-  		color: #000000;
+  		color: #020077;
     }
     #container {
       margin: 0 auto;
-      width: 700px;
+      width: 800px;
     }
-		h1 { font-size: 3.8em; color: #1b8b8b; margin-bottom: 3px; }
+		h1 { font-size: 3.8em; color: #020077; margin-bottom: 3px; }
 		h1 .small { font-size: 0.4em; }
 		h1 a { text-decoration: none }
-		h2 { font-size: 1.5em; color: #1b8b8b; }
-    h3 { text-align: center; color: #1b8b8b; }
-    a { color: #1b8b8b; }
+		h2 { font-size: 1.5em; color: #020077; }
+    h3 { text-align: center; color: #020077; }
+    a { color: #020077; }
     .description { font-size: 1.2em; margin-bottom: 30px; margin-top: 30px; font-style: italic;}
     .download { float: right; }
-		pre { background: #000; color: #fff; padding: 15px;}
+		pre { background: #33329b; color: #eaeaff; padding: 15px; }
     hr { border: 0; width: 80%; border-bottom: 1px solid #aaa}
     .footer { text-align:center; padding-top:30px; font-style: italic; }
 	</style>
@@ -69,8 +69,21 @@
       <pre>$ git clone git://github.com/maidsafe/MaidSafe-DHT</pre>
     </p>
 
+    <h2>After Download</h2>
+    <p>
+      After downloading or cloning the project, you need to add two third party svn repositories:<br/><br/>
+      Move to the root directory:
+      <pre>$ cd MaidSafe-DHT</pre>
+      Create a new directory named thirdpartylibs:
+      <pre>$ mkdir thirdpartylibs</pre>
+      Checkout googlemock source:
+      <pre>$ svn co http://googlemock.googlecode.com/svn/trunk/ -r 352 thirdpartylibs/googlemock</pre>
+      Checkout Google Protocol Buffers source:
+      <pre>$ svn co http://protobuf.googlecode.com/svn/trunk/ -r 309 thirdpartylibs/protobuf</pre><br/><br/>
+    </p>
+
     <div class="footer">
-      get the source code on GitHub : <a href="http://github.com/maidsafe/MaidSafe-DHT">maidsafe/MaidSafe-DHT</a>
+      get the source code on GitHub : <a href="http://github.com/maidsafe/MaidSafe-DHT">maidsafe/MaidSafe-DHT</a><br/><br/>
     </div>
 
   </div>
