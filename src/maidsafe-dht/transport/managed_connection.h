@@ -121,6 +121,12 @@ class ManagedConnectionMap  {
   // Check if the specified port has already be occupied
   bool HasPort(const boost::uint32_t &index);
 
+  // Creates a managed connection into the multi index container
+  // The connection_id will be returned
+  template <typename TransportType>
+  boost::uint32_t CreateConnection(boost::asio::io_service &asio_service,
+                                   const Endpoint &peer);
+
   // Adds a managed connection into the multi index container
   // The connection_id will be returned
   boost::uint32_t InsertConnection(const TransportPtr transport);

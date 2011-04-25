@@ -61,6 +61,14 @@ void ManagedConnectionMap::SetReservedPort(const uint32_t& port) {
   }
 }
 
+template <typename TransportType>
+boost::uint32_t ManagedConnectionMap::CreateConnection(
+    boost::asio::io_service &asio_service,
+    const Endpoint &peer) {
+  TransportPtr transport(new TransportType(asio_service));
+  return InsertConnection(transport, peer, GenerateConnectionID());
+}
+
 boost::uint32_t ManagedConnectionMap::InsertConnection(
     const TransportPtr transport) {
   IP localIP(boost::asio::ip::address_v4::loopback());
