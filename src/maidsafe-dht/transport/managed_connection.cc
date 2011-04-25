@@ -78,9 +78,47 @@ boost::uint32_t ManagedConnectionMap::InsertConnection(
   UniqueLock unique_lock(shared_mutex_);
   ManagedConnectionContainer::index<TagConnectionId>::type&
       index_by_connection_id = connections_container_->get<TagConnectionId>();
+
+  // For managed connections, the error handling shall be always in the charge
+  // of ManagedConnectionMap
+  transport->on_error()->connect(transport::OnError::element_type::slot_type(
+      &ManagedConnectionMap::DoOnConnectionError, this, _1, _2));
   ManagedConnection mc(transport, peer_id, GenerateConnectionID());
   index_by_connection_id.insert(mc);
   return mc.connectionid;
+}
+
+boost::uint32_t ManagedConnectionMap::InsertConnection(
+    const TransportPtr transport,
+    const std::string &peer_id,
+    const boost::uint32_t &port) {
+  if (((peer_id != "") && (HasPeerId(peer_id))) || (HasPort(port)))
+    return -1;
+
+  UniqueLock unique_lock(shared_mutex_);
+  ManagedConnectionContainer::index<TagConnectionId>::type&
+      index_by_connection_id = connections_container_->get<TagConnectionId>();
+
+  // For managed connections, the error handling shall be always in the charge
+  // of ManagedConnectionMap
+  transport->on_error()->connect(transport::OnError::element_type::slot_type(
+      &ManagedConnectionMap::DoOnConnectionError, this, _1, _2));
+  ManagedConnection mc(transport, peer_id, port);
+  index_by_connection_id.insert(mc);
+  return mc.connectionid;
+}
+
+void ManagedConnectionMap::DoOnConnectionError(
+    const TransportCondition &error, const Endpoint peer) {
+  UniqueLock unique_lock(shared_mutex_);
+  std::stringstream out;
+  out << peer.port;
+  std::string peer_id = peer.ip.to_string() + ":" + out.str();
+  ManagedConnectionContainer::index<TagConnectionPeerId>::type&
+      index_by_peer_id = connections_container_->get<TagConnectionPeerId>();
+  auto it = index_by_peer_id.find(peer_id);
+  if (it != index_by_peer_id.end())
+    index_by_peer_id.modify(it, ChangeConnectionStatus(false));
 }
 
 boost::uint32_t ManagedConnectionMap::GenerateConnectionID() {
@@ -174,6 +212,29 @@ TransportPtr ManagedConnectionMap::GetConnection(
   if (it == index_by_connection_id.end())
     return TransportPtr();
   return (*it).transport_ptr;
+}
+
+bool ManagedConnectionMap::IsConnected(const std::string &peer_id) {
+  if (peer_id == "")
+    return false;
+
+  SharedLock shared_lock(shared_mutex_);
+  ManagedConnectionContainer::index<TagConnectionPeerId>::type&
+      index_by_peer_id = connections_container_->get<TagConnectionPeerId>();
+  auto it = index_by_peer_id.find(peer_id);
+  if (it == index_by_peer_id.end())
+    return false;
+  return (*it).is_connected;
+}
+
+bool ManagedConnectionMap::IsConnected(const boost::uint32_t &connection_id) {
+  SharedLock shared_lock(shared_mutex_);
+  ManagedConnectionContainer::index<TagConnectionId>::type&
+      index_by_connection_id = connections_container_->get<TagConnectionId>();
+  auto it = index_by_connection_id.find(connection_id);
+  if (it == index_by_connection_id.end())
+    return false;
+  return (*it).is_connected;
 }
 
 }  // namespace transport

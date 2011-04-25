@@ -26,6 +26,7 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 #include <string>
+#include <sstream>
 
 #include "boost/multi_index_container.hpp"
 #include "boost/multi_index/composite_key.hpp"
@@ -50,15 +51,19 @@ struct ManagedConnection {
                     const std::string &peer_id,
                     const boost::uint32_t &connection_id)
       : transport_ptr(transport), peerid(peer_id),
-        connectionid(connection_id) {}
-  bool IsConnected() const {
-//     return transport_ptr->IsConnected();
-    // TODO (qi.ma@maisdsafe.net) : make transport API support isconnected()
-    return true;
-  }
+        connectionid(connection_id), is_connected(true) {}
   TransportPtr transport_ptr;
   std::string peerid;
   boost::uint32_t connectionid;
+  bool is_connected;
+};
+
+struct ChangeConnectionStatus {
+  explicit ChangeConnectionStatus(bool new_status) : status(new_status) {}
+  void operator()(ManagedConnection &manged_connection) {
+    manged_connection.is_connected = status;
+  }
+  bool status;
 };
 
 struct TagConnectionId {};
@@ -78,8 +83,7 @@ typedef boost::multi_index::multi_index_container<
     >,
     boost::multi_index::ordered_non_unique<
       boost::multi_index::tag<TagConnectionStatus>,
-      boost::multi_index::const_mem_fun<ManagedConnection, bool,
-                                        &ManagedConnection::IsConnected>
+      BOOST_MULTI_INDEX_MEMBER(ManagedConnection, bool, is_connected)
     >
   >
 > ManagedConnectionContainer;
@@ -126,6 +130,9 @@ class ManagedConnectionMap  {
   boost::uint32_t InsertConnection(const TransportPtr transport);
   boost::uint32_t InsertConnection(const TransportPtr transport,
                                    const std::string &peer_id);
+  boost::uint32_t InsertConnection(const TransportPtr transport,
+                                   const std::string &peer_id,
+                                   const boost::uint32_t &port);
 
   // Remove a managed connection based on the node_id
   // Returns true if successfully removed or false otherwise.
@@ -135,6 +142,10 @@ class ManagedConnectionMap  {
   // Return the TransportPtr of the node
   TransportPtr GetConnection(const std::string &peer_id);
   TransportPtr GetConnection(const boost::uint32_t &connection_id);
+
+  // Return the Connection Status
+  bool IsConnected(const std::string &peer_id);
+  bool IsConnected(const boost::uint32_t &connection_id);
 
   // Update the TransportPtr of the node
   TransportPtr UpdateConnection(const std::string &peer_id);
@@ -149,6 +160,9 @@ class ManagedConnectionMap  {
    *  @return The notify_down_connection_ signal. */
   NotifyDownConnectionPtr notify_down_connection();
 
+  /** Return next available port */
+  boost::uint32_t NextEmptyPort() { return GenerateConnectionID(); }
+
  private:
   /** Thread function keeps monitoring the connections' status */
   void MonitoringConnectionsStatus();
@@ -158,6 +172,10 @@ class ManagedConnectionMap  {
 
   /** Check if the input peer_id already contained in the multi-index */
   bool HasPeerId(const std::string &peer_id);
+
+  /** Handle connection error, mark corresponding connection to be DOWN */
+  void DoOnConnectionError(const TransportCondition &error,
+                           const Endpoint peer);
 
   /**  Multi_index container of managed connections */
   std::shared_ptr<ManagedConnectionContainer> connections_container_;
