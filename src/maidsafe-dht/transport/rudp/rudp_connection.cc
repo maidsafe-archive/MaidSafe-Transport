@@ -198,7 +198,7 @@ void RudpConnection::StartClientConnect() {
                                         shared_from_this(), arg::_1));
   socket_.AsyncConnect(remote_endpoint_, handler);
 
-  timer_.expires_from_now(kDefaultInitialTimeout);
+  timer_.expires_from_now(RudpParameters::kClientConnectTimeOut);
   timeout_state_ = kSending;
 }
 
@@ -272,7 +272,15 @@ void RudpConnection::HandleReadData(const bs::error_code &ec, size_t length) {
   if (data_received_ == data_size_) {
     // No timeout applies while dispatching the message.
     timer_.expires_at(boost::posix_time::pos_infin);
-
+    // if a keep alive message received, no need to do anything more,
+    // close directly.
+    if (data_size_ == 5) {
+      std::string temp(buffer_.begin(), buffer_.end());
+      if (temp == "Alive") {
+        Close();
+        return;
+      }
+    }
     // Dispatch the message outside the strand.
     strand_.get_io_service().post(std::bind(&RudpConnection::DispatchMessage,
                                             shared_from_this()));

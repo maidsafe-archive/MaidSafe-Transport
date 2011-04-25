@@ -34,23 +34,20 @@ namespace transport {
 ManagedConnectionMap::ManagedConnectionMap()
     : connections_container_(new ManagedConnectionContainer),
       shared_mutex_(),
+      mutex_(),
       monitoring_mode_(MonitoringMode::kPassive),
-      index_(1501) {}
+      index_(1501),
+      condition_enquiry_(),
+      thread_group_() {}
 
-ManagedConnectionMap::~ManagedConnectionMap() {}
-
-template <typename TransportType>
-boost::uint32_t ManagedConnectionMap::CreateConnection(
-    boost::asio::io_service &asio_service) {
-  return CreateConnection<TransportType>(asio_service, "");
-}
-
-template <typename TransportType>
-boost::uint32_t ManagedConnectionMap::CreateConnection(
-    boost::asio::io_service &asio_service,
-    const std::string &peer_id) {
-  TransportPtr transport(new TransportType(asio_service));
-  return InsertConnection(transport, peer_id);
+ManagedConnectionMap::~ManagedConnectionMap() {
+  monitoring_mode_ = MonitoringMode::kPassive;
+  connections_container_->clear();
+  if (thread_group_)  {
+    thread_group_->interrupt_all();
+    thread_group_->join_all();
+    thread_group_.reset();
+  }
 }
 
 void ManagedConnectionMap::SetReservedPort(const uint32_t& port) {
@@ -59,21 +56,19 @@ void ManagedConnectionMap::SetReservedPort(const uint32_t& port) {
     UniqueLock unique_lock(shared_mutex_);
     ManagedConnectionContainer::index<TagConnectionId>::type&
         index_by_connection_id = connections_container_->get<TagConnectionId>();
-    ManagedConnection mc(TransportPtr(), "", port);
+    ManagedConnection mc(TransportPtr(), Endpoint(), "", port);
     index_by_connection_id.insert(mc);
   }
 }
 
 boost::uint32_t ManagedConnectionMap::InsertConnection(
     const TransportPtr transport) {
-  return InsertConnection(transport, "");
-}
-
-boost::uint32_t ManagedConnectionMap::InsertConnection(
-    const TransportPtr transport,
-    const std::string &peer_id) {
-  if ((peer_id != "") && (HasPeerId(peer_id)))
-    return -1;
+  IP localIP(boost::asio::ip::address_v4::loopback());
+  boost::uint32_t peer_port = GenerateConnectionID();
+  Endpoint peer(localIP, peer_port);
+  std::stringstream out;
+  out << peer_port;
+  std::string peer_id = peer.ip.to_string() + ":" + out.str();
 
   UniqueLock unique_lock(shared_mutex_);
   ManagedConnectionContainer::index<TagConnectionId>::type&
@@ -83,15 +78,20 @@ boost::uint32_t ManagedConnectionMap::InsertConnection(
   // of ManagedConnectionMap
   transport->on_error()->connect(transport::OnError::element_type::slot_type(
       &ManagedConnectionMap::DoOnConnectionError, this, _1, _2));
-  ManagedConnection mc(transport, peer_id, GenerateConnectionID());
+  ManagedConnection mc(transport, peer, peer_id, peer_port);
   index_by_connection_id.insert(mc);
   return mc.connectionid;
 }
 
 boost::uint32_t ManagedConnectionMap::InsertConnection(
     const TransportPtr transport,
-    const std::string &peer_id,
-    const boost::uint32_t &port) {
+    const Endpoint &peer,
+    const boost::uint32_t port) {
+  boost::uint32_t peer_port = peer.port;
+  std::stringstream out;
+  out << peer_port;
+  std::string peer_id = peer.ip.to_string() + ":" + out.str();
+
   if (((peer_id != "") && (HasPeerId(peer_id))) || (HasPort(port)))
     return -1;
 
@@ -103,7 +103,7 @@ boost::uint32_t ManagedConnectionMap::InsertConnection(
   // of ManagedConnectionMap
   transport->on_error()->connect(transport::OnError::element_type::slot_type(
       &ManagedConnectionMap::DoOnConnectionError, this, _1, _2));
-  ManagedConnection mc(transport, peer_id, port);
+  ManagedConnection mc(transport, peer, peer_id, port);
   index_by_connection_id.insert(mc);
   return mc.connectionid;
 }
@@ -235,6 +235,42 @@ bool ManagedConnectionMap::IsConnected(const boost::uint32_t &connection_id) {
   if (it == index_by_connection_id.end())
     return false;
   return (*it).is_connected;
+}
+
+void ManagedConnectionMap::AliveEnquiryThread() {
+  boost::mutex::scoped_lock loch_surlaplage(mutex_);
+  while (monitoring_mode_ == MonitoringMode::kActive) {
+    condition_enquiry_.wait(loch_surlaplage);
+
+    ManagedConnectionContainer::index<TagConnectionId>::type&
+        index_by_connection_id = connections_container_->get<TagConnectionId>();
+    auto it = index_by_connection_id.begin();
+    auto it_end = index_by_connection_id.end();
+    while ((it != it_end) && ((*it).is_connected)) {
+      (*it).transport_ptr->Send("Alive", (*it).peer, kImmediateTimeout);
+      ++it;
+    }
+  }
+}
+
+void ManagedConnectionMap::EnquiryThread() {
+  while (monitoring_mode_ == MonitoringMode::kActive) {
+    // sleep a while to prevent flooding
+    boost::this_thread::sleep(boost::posix_time::milliseconds(1000));
+    condition_enquiry_.notify_one();
+  }
+}
+
+void ManagedConnectionMap::StartMonitoring(
+    const MonitoringMode &monitoring_mode){
+  monitoring_mode_ = monitoring_mode;
+  if (monitoring_mode == MonitoringMode::kActive) {
+    thread_group_.reset(new boost::thread_group());
+    thread_group_->create_thread(
+        std::bind(&ManagedConnectionMap::AliveEnquiryThread, this));
+    thread_group_->create_thread(
+        std::bind(&ManagedConnectionMap::EnquiryThread, this));
+  }
 }
 
 }  // namespace transport

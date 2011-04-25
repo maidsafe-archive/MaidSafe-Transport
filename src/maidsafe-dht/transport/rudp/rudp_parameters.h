@@ -83,6 +83,9 @@ class RudpParameters {
   // Slow speed threshold to force the socket closed, in b/s
   static boost::uint32_t SlowSpeedThreshold;
 
+  // Timeout during client connection establishment
+  static boost::posix_time::time_duration kClientConnectTimeOut;
+
   // Defined connection types
   enum ConnectionType {
     kWireless = 0x0fffffff,

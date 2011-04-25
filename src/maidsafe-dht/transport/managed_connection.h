@@ -36,6 +36,7 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "boost/multi_index/mem_fun.hpp"
 #include "boost/thread/shared_mutex.hpp"
 #include "boost/thread/locks.hpp"
+#include "boost/thread.hpp"
 
 #include "maidsafe-dht/kademlia/config.h"
 #include "maidsafe-dht/transport/transport.h"
@@ -48,11 +49,13 @@ typedef std::shared_ptr<Transport> TransportPtr;
 
 struct ManagedConnection {
   ManagedConnection(const TransportPtr transport,
+                    const Endpoint new_peer,
                     const std::string &peer_id,
                     const boost::uint32_t &connection_id)
-      : transport_ptr(transport), peerid(peer_id),
+      : transport_ptr(transport), peer(new_peer), peerid(peer_id),
         connectionid(connection_id), is_connected(true) {}
   TransportPtr transport_ptr;
+  Endpoint peer;
   std::string peerid;
   boost::uint32_t connectionid;
   bool is_connected;
@@ -109,13 +112,6 @@ class ManagedConnectionMap  {
   ManagedConnectionMap();
 
   ~ManagedConnectionMap();
-  // Creates a managed connection into the multi index container
-  // The connection_id will be returned
-  template <typename TransportType>
-  boost::uint32_t CreateConnection(boost::asio::io_service &asio_service);
-  template <typename TransportType>
-  boost::uint32_t CreateConnection(boost::asio::io_service &asio_service,
-                                   const std::string &peer_id);
 
   // Set system reserved port
   // System reserved port shall not be used as communication connection
@@ -129,10 +125,8 @@ class ManagedConnectionMap  {
   // The connection_id will be returned
   boost::uint32_t InsertConnection(const TransportPtr transport);
   boost::uint32_t InsertConnection(const TransportPtr transport,
-                                   const std::string &peer_id);
-  boost::uint32_t InsertConnection(const TransportPtr transport,
-                                   const std::string &peer_id,
-                                   const boost::uint32_t &port);
+                                   const Endpoint &peer,
+                                   const boost::uint32_t port);
 
   // Remove a managed connection based on the node_id
   // Returns true if successfully removed or false otherwise.
@@ -164,9 +158,6 @@ class ManagedConnectionMap  {
   boost::uint32_t NextEmptyPort() { return GenerateConnectionID(); }
 
  private:
-  /** Thread function keeps monitoring the connections' status */
-  void MonitoringConnectionsStatus();
-
   /** Generate next unique empty connection ID */
   boost::uint32_t GenerateConnectionID();
 
@@ -177,18 +168,27 @@ class ManagedConnectionMap  {
   void DoOnConnectionError(const TransportCondition &error,
                            const Endpoint peer);
 
+  /** Thread function to keep enquiring all entries about the alive status */
+  void AliveEnquiryThread();
+  void EnquiryThread();
+
   /**  Multi_index container of managed connections */
   std::shared_ptr<ManagedConnectionContainer> connections_container_;
   /** Signal to be fired when there is one dropped connection detected */
   NotifyDownConnectionPtr notify_down_connection_;
   /** Thread safe shared mutex */
   boost::shared_mutex shared_mutex_;
+  /** Mutex lock */
+  boost::mutex mutex_;
   /** Flag of monitoring mode */
   MonitoringMode monitoring_mode_;
   /** Global Counter used as an connection ID for each added transport */
   boost::uint32_t index_;
-
-//   boost::thread_group thread_group_;
+  /** Conditional Variable to wait/notify the thread monitoring function*/
+  boost::condition_variable condition_enquiry_;
+  /** The thread group to hold all monitoring treads
+   *  Used by: AliveEnquiryThread */
+  std::shared_ptr<boost::thread_group> thread_group_;
 
   typedef boost::shared_lock<boost::shared_mutex> SharedLock;
   typedef boost::upgrade_lock<boost::shared_mutex> UpgradeLock;
