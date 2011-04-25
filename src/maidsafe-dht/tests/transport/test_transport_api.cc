@@ -62,6 +62,8 @@ RudpParameters::ConnectionType RudpParameters::kConnectionType =
 bptime::time_duration RudpParameters::kSpeedCalculateInverval =
                                                     bptime::milliseconds(1000);
 boost::uint32_t RudpParameters::SlowSpeedThreshold = 1024;  // b/s
+bptime::time_duration RudpParameters::kClientConnectTimeOut =
+                                                    bptime::milliseconds(1000);
 
 namespace test {
 
