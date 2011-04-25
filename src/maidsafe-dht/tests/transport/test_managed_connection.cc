@@ -84,7 +84,7 @@ class RUDPManagedConnectionTest : public TransportAPITest<RudpTransport> {
   MCTestMessageHandlerPtr msgh_listener_;
 
 template <typename T>
-void SetupTransport(bool listen, size_t num_of_connections) {
+void PrepareTransport(bool listen, size_t num_of_connections) {
   for (size_t i = 0; i < num_of_connections; ++i) {
     if (listen) {
       TransportPtr transport1;
@@ -108,6 +108,42 @@ void SetupTransport(bool listen, size_t num_of_connections) {
           boost::bind(&MCTestMessageHandler::DoOnError, msgh_sender_, _1));
       senders_.push_back(managed_connections_.InsertConnection(transport1));
     }
+  }
+}
+
+template <typename T>
+void PrepareConnection(size_t num_of_connections) {
+  for (size_t i = 0; i < num_of_connections; ++i) {
+    boost::uint32_t port1 = managed_connections_.NextEmptyPort();
+    boost::uint32_t port2 = managed_connections_.NextEmptyPort();
+    std::stringstream out1;
+    out1 << port1;
+    std::string peer1_id = kIP.to_string() + ":" + out1.str();
+
+    std::stringstream out2;
+    out2 << port2;
+    std::string peer2_id = kIP.to_string() + ":" + out2.str();
+
+    TransportPtr transport_listen;
+      transport_listen = TransportPtr(new T(*asio_service_));
+    transport_listen->on_message_received()->connect(
+        boost::bind(&MCTestMessageHandler::DoOnRequestReceived,
+                    msgh_listener_, _1, _2, _3, _4));
+    managed_connections_.InsertConnection(transport_listen,
+                                          peer2_id,
+                                          port1);
+    EXPECT_EQ(kSuccess,
+              transport_listen->StartListening(Endpoint(kIP, port1)));
+    listening_ports_.push_back(port1);
+
+    TransportPtr transport_send;
+      transport_send = TransportPtr(new T(*asio_service_1_));
+    transport_send->on_message_received()->connect(
+        boost::bind(&MCTestMessageHandler::DoOnResponseReceived,
+                    msgh_sender_, _1, _2, _3, _4));
+    senders_.push_back(managed_connections_.InsertConnection(transport_send,
+                                                             peer1_id,
+                                                             port2));
   }
 }
 
@@ -165,8 +201,8 @@ TEST_F(RUDPManagedConnectionTest, BEH_TRANS_OneToManySingleMessage) {
     request = request + request;
 
   // Prepare 10 listeners, one sender
-  SetupTransport<RudpTransport>(true, 10);
-  SetupTransport<RudpTransport>(false, 1);
+  PrepareTransport<RudpTransport>(true, 10);
+  PrepareTransport<RudpTransport>(false, 1);
 
   auto it = listening_ports_.begin();
   while (it != listening_ports_.end()) {
@@ -184,6 +220,28 @@ TEST_F(RUDPManagedConnectionTest, BEH_TRANS_OneToManySingleMessage) {
   }
   EXPECT_EQ(size_t(10), msgh_listener_->requests_received().size());
   EXPECT_EQ(size_t(10), msgh_sender_->responses_received().size());
+}
+
+TEST_F(RUDPManagedConnectionTest, BEH_TRANS_DetectDroppedReceiver) {
+  std::string request(RandomString(1));
+  for (int i = 0; i < 26; ++i)
+    request = request + request;
+
+  // Prepare one pair of listeners and sender, i.e. one managed connection
+  PrepareConnection<RudpTransport>(1);
+
+  managed_connections_.GetConnection(senders_[0])->Send(
+      request, Endpoint(kIP, listening_ports_[0]), bptime::seconds(26));
+
+  int waited_seconds(0);
+  while ((managed_connections_.IsConnected(senders_[0])) &&
+         (waited_seconds < 10)) {
+    boost::this_thread::sleep(boost::posix_time::milliseconds(1000));
+    ++waited_seconds;
+    if (waited_seconds == 1)
+        managed_connections_.GetConnection(listening_ports_[0])->StopListening();
+  }
+  EXPECT_GT(10, waited_seconds);
 }
 
 }  // namespace test
