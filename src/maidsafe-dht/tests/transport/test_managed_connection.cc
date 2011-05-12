@@ -52,13 +52,13 @@ class MCTestMessageHandler : public TestMessageHandler {
     : TestMessageHandler(id),
       shut_down_records_() {}
 
-void DoOnShutDownByPeer(const TransportCondition &tc) {
-  shut_down_records_.push_back(tc);
-}
+  void DoOnShutDownByPeer(const TransportCondition &tc) {
+    shut_down_records_.push_back(tc);
+  }
 
-Results shut_down_records() {
-  return shut_down_records_;
-}
+  Results shut_down_records() {
+    return shut_down_records_;
+  }
 
  private:
   MCTestMessageHandler(const MCTestMessageHandler&);
@@ -124,7 +124,7 @@ void PrepareConnection(size_t num_of_connections) {
                     msgh_listener_, _1, _2, _3, _4));
     managed_connections_.InsertConnection(transport_listen,
                                           Endpoint(kIP, port2),
-                                          port1);
+                                          port1, true);
     EXPECT_EQ(kSuccess,
               transport_listen->StartListening(Endpoint(kIP, port1)));
     listening_ports_.push_back(port1);
@@ -257,8 +257,6 @@ TEST_F(RUDPManagedConnectionTest, BEH_TRANS_OneToOneAliveMessage) {
 }
 
 TEST_F(RUDPManagedConnectionTest, BEH_TRANS_OneToOneAliveDetectReceiverDrop) {
-  std::string request("Alive");
-
   // Prepare one pair of listeners and sender, i.e. one managed connection
   PrepareConnection<RudpTransport>(1);
   // Start keep enquiring
@@ -274,6 +272,46 @@ TEST_F(RUDPManagedConnectionTest, BEH_TRANS_OneToOneAliveDetectReceiverDrop) {
             listening_ports_[0])->StopListening();
   }
   EXPECT_GT(10, waited_seconds);
+}
+
+TEST_F(RUDPManagedConnectionTest, BEH_TRANS_MultipleAliveDetection) {
+  // Prepare multiple pairs of listeners and sender,
+  // i.e. multiple managed connections
+//   int num_connection = 1015;  // max num that can be opened on udp
+//   int num_connection = 506; // max num that can be handled (no send timeout)
+  int num_connection = 510;
+  PrepareConnection<RudpTransport>(num_connection);
+  // Start keep enquiring
+  managed_connections_.StartMonitoring(MonitoringMode::kActive);
+
+  int waited_seconds(0);
+  std::vector<int> dropped_connections_index;
+  int stopping;
+  // Randomly drop five connections each second
+  while (waited_seconds < 5) {
+    boost::this_thread::sleep(boost::posix_time::milliseconds(1000));
+    ++waited_seconds;
+    for (int i = 0; i < 5; ++i) {
+      stopping = RandomUint32() % num_connection;
+      managed_connections_.GetConnection(
+          listening_ports_[stopping])->StopListening();
+      dropped_connections_index.push_back(stopping);
+    }
+  }
+  // ensure the dropped connection will be detected, as the round-robbin only
+  // works every one second
+  boost::this_thread::sleep(boost::posix_time::milliseconds(1500));
+
+  for (int i = 0; i < num_connection; ++i) {
+    auto it = std::find(dropped_connections_index.begin(),
+                        dropped_connections_index.end(),
+                        i);
+    if (it == dropped_connections_index.end()) {
+      EXPECT_TRUE(managed_connections_.IsConnected(senders_[i]));
+    } else {
+      EXPECT_FALSE(managed_connections_.IsConnected(senders_[i]));
+    }
+  }
 }
 
 }  // namespace test
