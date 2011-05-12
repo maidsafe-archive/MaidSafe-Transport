@@ -53,12 +53,23 @@ struct ManagedConnection {
                     const std::string &peer_id,
                     const boost::uint32_t &connection_id)
       : transport_ptr(transport), peer(new_peer), peerid(peer_id),
-        connectionid(connection_id), is_connected(true) {}
+        connectionid(connection_id), is_connected(true), is_client(true) {}
+
+  ManagedConnection(const TransportPtr transport,
+                    const Endpoint new_peer,
+                    const std::string &peer_id,
+                    const boost::uint32_t &connection_id,
+                    const bool client_mode)
+      : transport_ptr(transport), peer(new_peer), peerid(peer_id),
+        connectionid(connection_id), is_connected(true),
+        is_client(client_mode) {}
+
   TransportPtr transport_ptr;
   Endpoint peer;
   std::string peerid;
   boost::uint32_t connectionid;
   bool is_connected;
+  bool is_client;
 };
 
 struct ChangeConnectionStatus {
@@ -133,6 +144,10 @@ class ManagedConnectionMap  {
   boost::uint32_t InsertConnection(const TransportPtr transport,
                                    const Endpoint &peer,
                                    const boost::uint32_t port);
+  boost::uint32_t InsertConnection(const TransportPtr transport,
+                                   const Endpoint &peer,
+                                   const boost::uint32_t port,
+                                   const bool server_mode);
 
   // Remove a managed connection based on the node_id
   // Returns true if successfully removed or false otherwise.

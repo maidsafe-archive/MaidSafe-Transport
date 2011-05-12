@@ -95,6 +95,14 @@ boost::uint32_t ManagedConnectionMap::InsertConnection(
     const TransportPtr transport,
     const Endpoint &peer,
     const boost::uint32_t port) {
+  return InsertConnection(transport, peer, port, false);
+}
+
+boost::uint32_t ManagedConnectionMap::InsertConnection(
+    const TransportPtr transport,
+    const Endpoint &peer,
+    const boost::uint32_t port,
+    const bool server_mode) {
   boost::uint32_t peer_port = peer.port;
   std::stringstream out;
   out << peer_port;
@@ -107,11 +115,11 @@ boost::uint32_t ManagedConnectionMap::InsertConnection(
   ManagedConnectionContainer::index<TagConnectionId>::type&
       index_by_connection_id = connections_container_->get<TagConnectionId>();
 
-  // For managed connections, the error handling shall be always in the charge
-  // of ManagedConnectionMap
+  // For managed connections, the error handling shall be always handled by the
+  // ManagedConnectionMap
   transport->on_error()->connect(transport::OnError::element_type::slot_type(
       &ManagedConnectionMap::DoOnConnectionError, this, _1, _2));
-  ManagedConnection mc(transport, peer, peer_id, port);
+  ManagedConnection mc(transport, peer, peer_id, port, !server_mode);
   index_by_connection_id.insert(mc);
   return mc.connectionid;
 }
@@ -254,8 +262,11 @@ void ManagedConnectionMap::AliveEnquiryThread() {
         index_by_connection_id = connections_container_->get<TagConnectionId>();
     auto it = index_by_connection_id.begin();
     auto it_end = index_by_connection_id.end();
-    while ((it != it_end) && ((*it).is_connected)) {
-      (*it).transport_ptr->Send("Alive", (*it).peer, kImmediateTimeout);
+    while (it != it_end) {
+      // TODO (qi.ma@maidsafe.net) : make the client support listen on socket
+      // as well
+      if (((*it).is_connected) && ((*it).is_client))
+        (*it).transport_ptr->Send("Alive", (*it).peer, kImmediateTimeout);
       ++it;
     }
   }
