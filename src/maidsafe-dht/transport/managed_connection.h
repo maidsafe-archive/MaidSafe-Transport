@@ -38,6 +38,8 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "boost/thread/locks.hpp"
 #include "boost/thread.hpp"
 
+#include "maidsafe/common/utils.h"
+
 #include "maidsafe-dht/kademlia/config.h"
 #include "maidsafe-dht/transport/transport.h"
 
@@ -47,13 +49,17 @@ namespace transport {
 
 typedef std::shared_ptr<Transport> TransportPtr;
 
+// Maximum number of bytes to read at a time
+const int kNumOfEnquiryGroup = 5;
+
 struct ManagedConnection {
   ManagedConnection(const TransportPtr transport,
                     const Endpoint new_peer,
                     const std::string &peer_id,
                     const boost::uint32_t &connection_id)
       : transport_ptr(transport), peer(new_peer), peerid(peer_id),
-        connectionid(connection_id), is_connected(true), is_client(true) {}
+        connectionid(connection_id), is_connected(true), is_client(true),
+        enquiry_group(RandomUint32() % kNumOfEnquiryGroup) {}
 
   ManagedConnection(const TransportPtr transport,
                     const Endpoint new_peer,
@@ -62,7 +68,7 @@ struct ManagedConnection {
                     const bool client_mode)
       : transport_ptr(transport), peer(new_peer), peerid(peer_id),
         connectionid(connection_id), is_connected(true),
-        is_client(client_mode) {}
+        is_client(client_mode), enquiry_group(RandomUint32() % kNumOfEnquiryGroup) {}
 
   TransportPtr transport_ptr;
   Endpoint peer;
@@ -70,6 +76,7 @@ struct ManagedConnection {
   boost::uint32_t connectionid;
   bool is_connected;
   bool is_client;
+  int enquiry_group;
 };
 
 struct ChangeConnectionStatus {
@@ -83,6 +90,7 @@ struct ChangeConnectionStatus {
 struct TagConnectionId {};
 struct TagConnectionPeerId {};
 struct TagConnectionStatus {};
+struct TagConnectionEnquiryGroup {};
 
 typedef boost::multi_index::multi_index_container<
   ManagedConnection,
@@ -98,6 +106,10 @@ typedef boost::multi_index::multi_index_container<
     boost::multi_index::ordered_non_unique<
       boost::multi_index::tag<TagConnectionStatus>,
       BOOST_MULTI_INDEX_MEMBER(ManagedConnection, bool, is_connected)
+    >,
+    boost::multi_index::ordered_non_unique<
+      boost::multi_index::tag<TagConnectionEnquiryGroup>,
+      BOOST_MULTI_INDEX_MEMBER(ManagedConnection, int, enquiry_group)
     >
   >
 > ManagedConnectionContainer;
@@ -193,7 +205,7 @@ class ManagedConnectionMap  {
   void AliveEnquiryThread();
   void EnquiryThread();
 
-  /**  Multi_index container of managed connections */
+  /** Multi_index container of managed connections */
   std::shared_ptr<ManagedConnectionContainer> connections_container_;
   /** Signal to be fired when there is one dropped connection detected */
   NotifyDownConnectionPtr notify_down_connection_;
@@ -210,6 +222,8 @@ class ManagedConnectionMap  {
   /** The thread group to hold all monitoring treads
    *  Used by: AliveEnquiryThread */
   std::shared_ptr<boost::thread_group> thread_group_;
+  /** Bucket num for the current group to enquiry alive status */
+  int enquiry_index;
 
   typedef boost::shared_lock<boost::shared_mutex> SharedLock;
   typedef boost::upgrade_lock<boost::shared_mutex> UpgradeLock;

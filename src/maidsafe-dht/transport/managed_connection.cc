@@ -38,7 +38,8 @@ ManagedConnectionMap::ManagedConnectionMap()
       monitoring_mode_(MonitoringMode::kPassive),
       index_(1501),
       condition_enquiry_(),
-      thread_group_() {}
+      thread_group_(),
+      enquiry_index(0) {}
 
 ManagedConnectionMap::~ManagedConnectionMap() {
   monitoring_mode_ = MonitoringMode::kPassive;
@@ -258,17 +259,19 @@ void ManagedConnectionMap::AliveEnquiryThread() {
   while (monitoring_mode_ == MonitoringMode::kActive) {
     condition_enquiry_.wait(loch_surlaplage);
 
-    ManagedConnectionContainer::index<TagConnectionId>::type&
-        index_by_connection_id = connections_container_->get<TagConnectionId>();
-    auto it = index_by_connection_id.begin();
-    auto it_end = index_by_connection_id.end();
-    while (it != it_end) {
+    auto it = connections_container_->get<TagConnectionEnquiryGroup>().
+                  equal_range(enquiry_index);
+    while (it.first != it.second) {
       // TODO (qi.ma@maidsafe.net) : make the client support listen on socket
       // as well
-      if (((*it).is_connected) && ((*it).is_client))
-        (*it).transport_ptr->Send("Alive", (*it).peer, kImmediateTimeout);
-      ++it;
+      if (((*it.first).is_connected) && ((*it.first).is_client))
+        (*it.first).transport_ptr->Send("Alive", (*it.first).peer,
+                                        kImmediateTimeout);
+      it.first++;
     }
+    ++enquiry_index;
+    if (enquiry_index == kNumOfEnquiryGroup)
+      enquiry_index = 0;
   }
 }
 
