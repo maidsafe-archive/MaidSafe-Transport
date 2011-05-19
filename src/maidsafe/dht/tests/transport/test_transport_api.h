@@ -33,9 +33,13 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <vector>
 #include <utility>
 #include "gtest/gtest.h"
+#include "gtest/gtest-param-test.h"
 #include "boost/thread/mutex.hpp"
 #include "boost/thread/thread.hpp"
 #include "maidsafe/dht/transport/transport.h"
+#include "maidsafe/dht/transport/tcp_transport.h"
+#include "maidsafe/dht/transport/rudp/rudp_transport.h"
+#include "maidsafe/dht/transport/udp_transport.h"
 
 namespace maidsafe {
 
@@ -66,6 +70,10 @@ class TestMessageHandler {
                            const Info &info,
                            std::string *response,
                            Timeout *timeout);
+  void DoTimeOutOnRequestReceived(const std::string &request,
+                                  const Info &info,
+                                  std::string *response,
+                                  Timeout *timeout);
   void DoOnResponseReceived(const std::string &request,
                             const Info &info,
                             std::string *response,
@@ -76,6 +84,7 @@ class TestMessageHandler {
   IncomingMessages responses_received();
   OutgoingResponses responses_sent();
   Results results();
+  bool finished_;
  private:
   TestMessageHandler(const TestMessageHandler&);
   TestMessageHandler& operator=(const TestMessageHandler&);
@@ -88,17 +97,19 @@ class TestMessageHandler {
 
 
 template <typename T>
-class TransportAPITest: public testing::Test {
+class TransportAPI {
  public:
-  TransportAPITest();
-  ~TransportAPITest();
+  TransportAPI();
+  ~TransportAPI();
  protected:
   // Create a transport and an io_service listening on the given or random port
   // (if zero) if listen == true.  If not, only a transport is created, and the
   // test member asio_service_ is used.
   void SetupTransport(bool listen, Port lport);
-  void RunTransportTest(const int &num_messages);
-  void SendRPC(TransportPtr sender_pt, TransportPtr listener_pt);
+  void RunTransportTest(const int &num_messages,
+                        const int &messages_length = 4);
+  void SendRPC(TransportPtr sender_pt, TransportPtr listener_pt,
+               int &messages_length);
   void CheckMessages();
 
   IoServicePtr asio_service_, asio_service_1_, asio_service_2_, asio_service_3_;
@@ -114,6 +125,35 @@ class TransportAPITest: public testing::Test {
   boost::mutex mutex_;
   std::vector<std::string> request_messages_;
   boost::uint16_t count_;
+};
+
+template <typename T>
+class TransportAPITest : public TransportAPI<T>, public ::testing::Test {
+ public:
+  TransportAPITest() : TransportAPI<T>() {}
+};
+
+class RUDPSingleTransportAPITest : public TransportAPITest<RudpTransport> {
+ public:
+  RUDPSingleTransportAPITest() {}
+};
+
+class RUDPConfigurableTransportAPITest
+    : public TransportAPI<RudpTransport>,
+      public ::testing::TestWithParam<int> {
+ public:
+  RUDPConfigurableTransportAPITest() : TransportAPI<RudpTransport>() {
+    int configurations[3][6] = {{ 16,  128, 1400, 6400, 1024, 6000 },
+                                { 64,  256, 1400, 1400, 1024, 1024 },
+                                { 32,   64, 2800, 4800, 2038, 4076 }};
+    int config_selected = GetParam();
+    RudpParameters::kDefaultWindowSize = configurations[config_selected][0];
+    RudpParameters::kMaximumWindowSize = configurations[config_selected][1];
+    RudpParameters::kDefaultSize = configurations[config_selected][2];
+    RudpParameters::kMaxSize = configurations[config_selected][3];
+    RudpParameters::kDefaultDataSize = configurations[config_selected][4];
+    RudpParameters::kMaxDataSize = configurations[config_selected][5];
+  }
 };
 
 TYPED_TEST_CASE_P(TransportAPITest);

@@ -1,4 +1,4 @@
-/* Copyright (c) 2009 maidsafe.net limited
+/* Copyright (c) 2010 maidsafe.net limited
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification,
@@ -25,22 +25,46 @@ TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#ifndef MAIDSAFE_DHT_VERSION_H_
-#define MAIDSAFE_DHT_VERSION_H_
+// Author: Christopher M. Kohlhoff (chris at kohlhoff dot com)
 
-#define MAIDSAFE_DHT_VERSION 29
+#include "rudp_ack_of_ack_packet.h"
 
-#include "maidsafe/common/version.h"
+namespace asio = boost::asio;
 
+namespace maidsafe {
 
-#define THIS_NEEDS_MAIDSAFE_COMMON_VERSION 7
+namespace dht {
 
-#if MAIDSAFE_COMMON_VERSION < THIS_NEEDS_MAIDSAFE_COMMON_VERSION
-#error This API is not compatible with the installed library.\
-  Please update the maidsafe-common library.
-#elif MAIDSAFE_COMMON_VERSION > THIS_NEEDS_MAIDSAFE_COMMON_VERSION
-#error This API uses a newer version of the maidsafe-common library.\
-  Please update this project.
-#endif
+namespace transport {
 
-#endif  // MAIDSAFE_DHT_VERSION_H_
+RudpAckOfAckPacket::RudpAckOfAckPacket() {
+  SetType(kPacketType);
+}
+
+boost::uint32_t RudpAckOfAckPacket::AckSequenceNumber() const {
+  return AdditionalInfo();
+}
+
+void RudpAckOfAckPacket::SetAckSequenceNumber(boost::uint32_t n) {
+  SetAdditionalInfo(n);
+}
+
+bool RudpAckOfAckPacket::IsValid(const asio::const_buffer &buffer) {
+  return (IsValidBase(buffer, kPacketType) &&
+          (asio::buffer_size(buffer) == kPacketSize));
+}
+
+bool RudpAckOfAckPacket::Decode(const asio::const_buffer &buffer) {
+  return DecodeBase(buffer, kPacketType);
+}
+
+size_t RudpAckOfAckPacket::Encode(const asio::mutable_buffer &buffer) const {
+  return EncodeBase(buffer);
+}
+
+}  // namespace transport
+
+}  // namespace dht
+
+}  // namespace maidsafe
+

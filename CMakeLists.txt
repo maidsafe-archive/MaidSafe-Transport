@@ -122,8 +122,8 @@ SET(ALL_FILES_NATPMP_DIR ${SOURCE_FILES_NATPMP_DIR} ${HEADER_FILES_NATPMP_DIR})
 SOURCE_GROUP("nat-pnp Source Files" FILES ${SOURCE_FILES_NATPMP_DIR})
 SOURCE_GROUP("nat-pnp Header Files" FILES ${HEADER_FILES_NATPMP_DIR})
 
-FILE(GLOB SOURCE_FILES_TRANSPORT_DIR "${PROJECT_SOURCE_DIR}/src/maidsafe/dht/transport/*.cc")
-FILE(GLOB HEADER_FILES_TRANSPORT_DIR "${PROJECT_SOURCE_DIR}/src/maidsafe/dht/transport/*.h")
+FILE(GLOB SOURCE_FILES_TRANSPORT_DIR "${PROJECT_SOURCE_DIR}/src/maidsafe/dht/transport/*.cc" "${PROJECT_SOURCE_DIR}/src/maidsafe/dht/transport/rudp/*.cc")
+FILE(GLOB HEADER_FILES_TRANSPORT_DIR "${PROJECT_SOURCE_DIR}/src/maidsafe/dht/transport/*.h" "${PROJECT_SOURCE_DIR}/src/maidsafe/dht/transport/rudp/*.h")
 SET(ALL_FILES_TRANSPORT_DIR ${SOURCE_FILES_TRANSPORT_DIR} ${HEADER_FILES_TRANSPORT_DIR})
 SET(STYLE_TRANSPORT ${ALL_FILES_TRANSPORT_DIR})
 LIST(REMOVE_ITEM STYLE_TRANSPORT "${PROJECT_SOURCE_DIR}/src/maidsafe/dht/transport/transport.pb.cc")
@@ -314,6 +314,9 @@ ELSEIF(UNIX)
                               ${PROJECT_SOURCE_DIR}/src/maidsafe/dht/tests/kademlia/test_rpcs.cc
                               ${PROJECT_SOURCE_DIR}/src/maidsafe/dht/tests/transport/test_udp_transport.cc
                               ${PROJECT_SOURCE_DIR}/src/maidsafe/dht/tests/transport/test_transport_api.cc
+                              ${PROJECT_SOURCE_DIR}/src/maidsafe/dht/tests/transport/test_rudp_sliding_window.cc
+                              ${PROJECT_SOURCE_DIR}/src/maidsafe/dht/tests/transport/test_rudp_socket.cc
+                              ${PROJECT_SOURCE_DIR}/src/maidsafe/dht/tests/transport/test_rudp_transport.cc
                               ${PROJECT_SOURCE_DIR}/src/maidsafe/dht/kademlia/rpcs.cc
                               ${PROJECT_SOURCE_DIR}/src/maidsafe/dht/kademlia/node_impl.cc
                               ${PROJECT_SOURCE_DIR}/src/maidsafe/dht/kademlia/service.cc

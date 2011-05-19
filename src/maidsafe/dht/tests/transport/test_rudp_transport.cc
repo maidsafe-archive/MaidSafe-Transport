@@ -1,4 +1,4 @@
-/* Copyright (c) 2009 maidsafe.net limited
+/* Copyright (c) 2010 maidsafe.net limited
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification,
@@ -25,22 +25,23 @@ TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#ifndef MAIDSAFE_DHT_VERSION_H_
-#define MAIDSAFE_DHT_VERSION_H_
+#include "maidsafe/dht/transport/rudp/rudp_transport.h"
+#include "maidsafe/dht/tests/transport/test_transport_api.h"
 
-#define MAIDSAFE_DHT_VERSION 29
+namespace maidsafe {
 
-#include "maidsafe/common/version.h"
+namespace dht {
+
+namespace transport {
+
+namespace test {
 
 
-#define THIS_NEEDS_MAIDSAFE_COMMON_VERSION 7
 
-#if MAIDSAFE_COMMON_VERSION < THIS_NEEDS_MAIDSAFE_COMMON_VERSION
-#error This API is not compatible with the installed library.\
-  Please update the maidsafe-common library.
-#elif MAIDSAFE_COMMON_VERSION > THIS_NEEDS_MAIDSAFE_COMMON_VERSION
-#error This API uses a newer version of the maidsafe-common library.\
-  Please update this project.
-#endif
+}  // namespace test
 
-#endif  // MAIDSAFE_DHT_VERSION_H_
+}  // namespace transport
+
+}  // namespace dht
+
+}  // namespace maidsafe

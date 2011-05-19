@@ -44,7 +44,7 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 // #include "maidsafe-dht/common/routing_table.h"
 #include "maidsafe-dht/kademlia/node-api.h"
 #include "maidsafe-dht/kademlia/node_impl.h"
-#include "maidsafe-dht/transport/udttransport.h"
+#include "maidsafe/dht/transportudttransport.h"
 #include "maidsafe-dht/tests/validationimpl.h"
 // #include "maidsafe-dht/tests/kademlia/fake_callbacks.h"
 

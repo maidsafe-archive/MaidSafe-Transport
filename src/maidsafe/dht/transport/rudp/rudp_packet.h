@@ -1,4 +1,4 @@
-/* Copyright (c) 2009 maidsafe.net limited
+/* Copyright (c) 2010 maidsafe.net limited
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification,
@@ -25,22 +25,41 @@ TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#ifndef MAIDSAFE_DHT_VERSION_H_
-#define MAIDSAFE_DHT_VERSION_H_
+// Author: Christopher M. Kohlhoff (chris at kohlhoff dot com)
 
-#define MAIDSAFE_DHT_VERSION 29
+#ifndef MAIDSAFE_DHT_TRANSPORT_RUDP_PACKET_H_
+#define MAIDSAFE_DHT_TRANSPORT_RUDP_PACKET_H_
 
-#include "maidsafe/common/version.h"
+#include "boost/asio/buffer.hpp"
+#include "boost/cstdint.hpp"
+#include "maidsafe/dht/transport/transport.h"
 
+namespace maidsafe {
 
-#define THIS_NEEDS_MAIDSAFE_COMMON_VERSION 7
+namespace dht {
 
-#if MAIDSAFE_COMMON_VERSION < THIS_NEEDS_MAIDSAFE_COMMON_VERSION
-#error This API is not compatible with the installed library.\
-  Please update the maidsafe-common library.
-#elif MAIDSAFE_COMMON_VERSION > THIS_NEEDS_MAIDSAFE_COMMON_VERSION
-#error This API uses a newer version of the maidsafe-common library.\
-  Please update this project.
-#endif
+namespace transport {
 
-#endif  // MAIDSAFE_DHT_VERSION_H_
+class RudpPacket {
+ public:
+
+  // Get the destination socket id from an encoded packet.
+  static bool DecodeDestinationSocketId(boost::uint32_t *id,
+                                        const boost::asio::const_buffer &data);
+
+ protected:
+  // Prevent deletion through this type.
+  ~RudpPacket();
+
+  // Helper functions for encoding and decoding integers.
+  static void DecodeUint32(boost::uint32_t *n, const unsigned char *p);
+  static void EncodeUint32(boost::uint32_t n, unsigned char *p);
+};
+
+}  // namespace transport
+
+}  // namespace dht
+
+}  // namespace maidsafe
+
+#endif  // MAIDSAFE_DHT_TRANSPORT_RUDP_PACKET_H_
