@@ -37,6 +37,7 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "maidsafe/dht/kademlia/utils.h"
 #include "maidsafe/dht/transport/tcp_transport.h"
 #include "maidsafe/dht/transport/udp_transport.h"
+#include "maidsafe/dht/transport/rudp/rudp_transport.h"
 
 
 namespace arg = std::placeholders;
@@ -45,6 +46,35 @@ namespace arg = std::placeholders;
 namespace maidsafe {
 
 namespace dht {
+
+namespace transport {
+
+boost::uint32_t RudpParameters::kDefaultWindowSize = 16;
+boost::uint32_t RudpParameters::kMaximumWindowSize = 512;
+boost::uint32_t RudpParameters::kDefaultSize = 1480;
+boost::uint32_t RudpParameters::kMaxSize = 25980;
+boost::uint32_t RudpParameters::kDefaultDataSize = 1450;
+boost::uint32_t RudpParameters::kMaxDataSize = 25950;
+bptime::time_duration RudpParameters::kDefaultSendTimeOut =
+                                                    bptime::milliseconds(1000);
+bptime::time_duration RudpParameters::kDefaultReceiveTimeOut =
+                                                    bptime::milliseconds(200);
+bptime::time_duration RudpParameters::kDefaultAckTimeOut =
+                                                    bptime::milliseconds(1000);
+bptime::time_duration RudpParameters::kDefaultSendDelay =
+                                                    bptime::microseconds(1000);
+bptime::time_duration RudpParameters::kDefaultReceiveDelay =
+                                                    bptime::milliseconds(100);
+bptime::time_duration RudpParameters::kAckInterval =
+                                                    bptime::milliseconds(100);
+RudpParameters::ConnectionType RudpParameters::kConnectionType =
+                                 RudpParameters::ConnectionType::kWireless;
+bptime::time_duration RudpParameters::kSpeedCalculateInverval =
+                                                    bptime::milliseconds(1000);
+boost::uint32_t RudpParameters::SlowSpeedThreshold = 1024;  // b/s
+bptime::time_duration RudpParameters::kClientConnectTimeOut =
+                                                    bptime::milliseconds(1000);
+}
 
 namespace kademlia {
 
@@ -550,6 +580,9 @@ void Rpcs::Prepare(TransportType type,
       break;
     case kUdp:
       transport.reset(new transport::UdpTransport(*asio_service_));
+      break;
+    case kRUdp:
+      transport.reset(new transport::RudpTransport(*asio_service_));
       break;
     default:
       break;

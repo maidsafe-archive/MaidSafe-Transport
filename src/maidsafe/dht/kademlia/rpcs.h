@@ -57,7 +57,7 @@ namespace dht {
 
 namespace kademlia {
 
-enum TransportType { kTcp, kUdp, kOther };
+enum TransportType { kTcp, kUdp, kRUdp, kOther };
 
 class MessageHandler;
 class NodeId;

@@ -36,6 +36,7 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "maidsafe/dht/transport/tcp_transport.h"
 #include "maidsafe/dht/transport/udp_transport.h"
+#include "maidsafe/dht/transport/rudp/rudp_transport.h"
 #include "maidsafe/common/crypto.h"
 #include "maidsafe/common/utils.h"
 #include "maidsafe/dht/kademlia/config.h"
@@ -155,6 +156,9 @@ class RpcsTest: public CreateContactAndNodeId,
         break;
       case kUdp:
         transport_.reset(new transport::UdpTransport(*local_asio_));
+        break;
+      case kRUdp:
+        transport_.reset(new transport::RudpTransport(*local_asio_));
         break;
       default:
         break;
@@ -311,7 +315,7 @@ crypto::RsaKeyPair RpcsTest::sender_crypto_key_id_;
 crypto::RsaKeyPair RpcsTest::receiver_crypto_key_id_;
 
 INSTANTIATE_TEST_CASE_P(TransportTypes, RpcsTest,
-                        testing::Values(kTcp, kUdp));
+                        testing::Values(kTcp, kUdp, kRUdp));
 
 TEST_P(RpcsTest, BEH_KAD_PingNoTarget) {
   bool done(false);
