@@ -46,7 +46,9 @@ namespace transport {
 
 RudpMultiplexer::RudpMultiplexer(asio::io_service &asio_service)
   : socket_(asio_service),
-    receive_buffer_(RudpParameters::kMaxSize) {
+    receive_buffer_(RudpParameters::kMaxSize),
+    sender_endpoint_(),
+    dispatcher_() {
 }
 
 RudpMultiplexer::~RudpMultiplexer() {

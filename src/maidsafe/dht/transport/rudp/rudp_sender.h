@@ -31,6 +31,7 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define MAIDSAFE_DHT_TRANSPORT_RUDP_SENDER_H_
 
 #include "boost/asio/buffer.hpp"
+#include "boost/asio/deadline_timer.hpp"
 #include "boost/asio/ip/udp.hpp"
 #include "boost/cstdint.hpp"
 #include "boost/date_time/posix_time/posix_time_types.hpp"
@@ -94,7 +95,8 @@ class RudpSender {
   RudpCongestionControl &congestion_control_;
 
   struct UnackedPacket {
-    UnackedPacket() : lost(false) {}
+    UnackedPacket() : packet(), lost(false),
+        last_send_time(boost::asio::deadline_timer::traits_type::now()) {}
     RudpDataPacket packet;
     bool lost;
     boost::posix_time::ptime last_send_time;

@@ -303,7 +303,7 @@ void TransportAPI<T>::RunTransportTest(const int &num_messages,
     ++i;
     for (auto it = msg_handlers.begin(); it != msg_handlers.end(); ++it){
       if ((!(*it)->finished_) ||
-          ((*it)->responses_received().size() < num_messages))
+          ((*it)->responses_received().size() < (size_t)num_messages))
         waiting = true;
     }
   } while (waiting && (i < 10 * (num_messages + 1) * messages_length));

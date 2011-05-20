@@ -36,7 +36,6 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "maidsafe/dht/transport/transport.h"
 #include "maidsafe/dht/transport/tcp_transport.h"
 #include "maidsafe/dht/transport/rudp/rudp_transport.h"
-#include "maidsafe/dht/transport/udp_transport.h"
 #include "maidsafe/dht/transport/managed_connection.h"
 #include "maidsafe/dht/tests/transport/test_transport_api.h"
 
@@ -280,8 +279,10 @@ TEST_F(RUDPManagedConnectionTest, BEH_TRANS_MultipleAliveDetection) {
   // Prepare multiple pairs of listeners and sender,
   // i.e. multiple managed connections
 //   int num_connection = 1015;  // max num that can be opened on udp
-//   int num_connection = 506; // max num that can be handled (no send timeout)
-  int num_connection = 510;
+  int num_connection = 500; // max num that can be handled (no send timeout)
+//   int num_connection = 510;
+RudpParameters::kDefaultSendTimeOut = bptime::milliseconds(1000);
+RudpParameters::kClientConnectTimeOut = bptime::milliseconds(1000);
   PrepareConnection<RudpTransport>(num_connection);
   // Start keep enquiring
   managed_connections_.StartMonitoring(MonitoringMode::kActive);
@@ -301,9 +302,10 @@ TEST_F(RUDPManagedConnectionTest, BEH_TRANS_MultipleAliveDetection) {
     }
   }
   // ensure the dropped connection will be detected, as the round-robbin only
-  // works every one second
-  boost::this_thread::sleep(boost::posix_time::milliseconds(1500));
-
+  // works every one second per enquiry group and now having 5 groups,
+  // means at least 5 seconds need to be slept to ensure each connection has
+  // been enquired
+  boost::this_thread::sleep(boost::posix_time::milliseconds(6500));
   for (int i = 0; i < num_connection; ++i) {
     auto it = std::find(dropped_connections_index.begin(),
                         dropped_connections_index.end(),

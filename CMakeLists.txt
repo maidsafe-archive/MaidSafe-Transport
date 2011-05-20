@@ -317,6 +317,7 @@ ELSEIF(UNIX)
                               ${PROJECT_SOURCE_DIR}/src/maidsafe/dht/tests/transport/test_rudp_sliding_window.cc
                               ${PROJECT_SOURCE_DIR}/src/maidsafe/dht/tests/transport/test_rudp_socket.cc
                               ${PROJECT_SOURCE_DIR}/src/maidsafe/dht/tests/transport/test_rudp_transport.cc
+                              ${PROJECT_SOURCE_DIR}/src/maidsafe/dht/tests/transport/test_managed_connection.cc
                               ${PROJECT_SOURCE_DIR}/src/maidsafe/dht/kademlia/rpcs.cc
                               ${PROJECT_SOURCE_DIR}/src/maidsafe/dht/kademlia/node_impl.cc
                               ${PROJECT_SOURCE_DIR}/src/maidsafe/dht/kademlia/service.cc
@@ -324,6 +325,8 @@ ELSEIF(UNIX)
                               ${PROJECT_SOURCE_DIR}/src/maidsafe/dht/transport/tcp_connection.cc
                               ${PROJECT_SOURCE_DIR}/src/maidsafe/dht/transport/udp_transport.cc
                               ${PROJECT_SOURCE_DIR}/src/maidsafe/dht/transport/udp_request.cc
+                              ${PROJECT_SOURCE_DIR}/src/maidsafe/dht/transport/rudp/rudp_transport.cc
+                              ${PROJECT_SOURCE_DIR}/src/maidsafe/dht/transport/rudp/rudp_connection.cc
                               PROPERTIES COMPILE_FLAGS "-Wno-effc++")
   SET_SOURCE_FILES_PROPERTIES(${PROTO_SOURCE_FILES} PROPERTIES COMPILE_FLAGS "-w")
 ENDIF()

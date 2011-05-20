@@ -85,7 +85,7 @@ class RudpDataPacketTest : public testing::Test {
 
   void TestEncodeDecode() {
     std::string data;
-    for (int i = 0; i < RudpParameters::kMaxSize; ++i)
+    for (boost::uint32_t i = 0; i < RudpParameters::kMaxSize; ++i)
       data += "a";
     boost::uint32_t packet_sequence_number = 0x7fffffff;
     boost::uint32_t message_number = 0x1fffffff;
@@ -177,7 +177,8 @@ TEST_F(RudpDataPacketTest, FUNC_IsValid) {
   char d2[16];
   d2[0] = 0x00;
   EXPECT_TRUE(data_packet_.IsValid(boost::asio::buffer(d2)));
-  d2[0] = 0x80;
+  d2[0] = 0x01;
+  d2[0] = d2[0] << 7;
   EXPECT_FALSE(data_packet_.IsValid(boost::asio::buffer(d2)));
 }
 
@@ -309,12 +310,14 @@ TEST_F(RudpControlPacketTest, FUNC_IsValidBase) {
   }
   {
     // Input control packet is not in an expected packet type
-    d[0] = 0x80;
+    d[0] = 0x01;
+    d[0] = d[0] << 7;
     EXPECT_FALSE(IsValidBase(boost::asio::buffer(d), 0x7444));
   }
   {
     // Everything is fine
-    d[0] = 0xf4;
+    d[0] = 0x3d;
+    d[0] = d[0] << 2;
     d[1] = 0x44;
     EXPECT_TRUE(IsValidBase(boost::asio::buffer(d), 0x7444));
   }
@@ -373,12 +376,14 @@ TEST_F(RudpAckPacketTest, FUNC_IsValid) {
   char d[RudpControlPacket::kHeaderSize + 4];
   {
     // Packet type wrong
-    d[0] = 0x80;
+    d[0] = 0x01;
+    d[0] = d[0] << 7;
     EXPECT_FALSE(ack_packet_.IsValid(boost::asio::buffer(d)));
   }
   {
     // Everything is fine
-    d[0] = 0x80;
+    d[0] = 0x01;
+    d[0] = d[0] << 7;
     d[1] = RudpAckPacket::kPacketType;
     EXPECT_TRUE(ack_packet_.IsValid(boost::asio::buffer(d)));
   }
@@ -440,12 +445,14 @@ TEST_F(RudpHandshakePacketTest, FUNC_IsValid) {
   char d[RudpHandshakePacket::kPacketSize];
   {
     // Packet type wrong
-    d[0] = 0x80;
+    d[0] = 0x01;
+    d[0] = d[0] << 7;
     EXPECT_FALSE(handshake_packet_.IsValid(boost::asio::buffer(d)));
   }
   {
     // Everything is fine
-    d[0] = 0x80;
+    d[0] = 0x01;
+    d[0] = d[0] << 7;
     d[1] = RudpHandshakePacket::kPacketType;
     EXPECT_TRUE(handshake_packet_.IsValid(boost::asio::buffer(d)));
   }
@@ -514,7 +521,8 @@ TEST(RudpKeepalivePacketTest, FUNC_ALL) {
   {
     // Decode with a type wrong Packet
     char d[RudpKeepalivePacket::kPacketSize];
-    d[0] = 0x80;
+    d[0] = 0x01;
+    d[0] = d[0] << 7;
     EXPECT_FALSE(keepalive_packet.Decode(boost::asio::buffer(d)));
   }
   {
@@ -539,7 +547,8 @@ TEST(RudpShutdownPacketTest, FUNC_ALL) {
   {
     // Decode with a type wrong Packet
     char d[RudpShutdownPacket::kPacketSize];
-    d[0] = 0x80;
+    d[0] = 0x01;
+    d[0] = d[0] << 7;
     EXPECT_FALSE(shutdown_packet.Decode(boost::asio::buffer(d)));
   }
   {
@@ -564,7 +573,8 @@ TEST(RudpAckOfAckPacketTest, FUNC_ALL) {
   {
     // Decode with a type wrong Packet
     char d[RudpAckOfAckPacket::kPacketSize];
-    d[0] = 0x80;
+    d[0] = 0x01;
+    d[0] = d[0] << 7;
     EXPECT_FALSE(ackofack_packet.Decode(boost::asio::buffer(d)));
   }
   {
@@ -602,12 +612,14 @@ TEST_F(RudpNegativeAckPacketTest, FUNC_IsValid) {
   char d[RudpControlPacket::kHeaderSize + 12];
   {
     // Packet type wrong
-    d[0] = 0x80;
+    d[0] = 0x01;
+    d[0] = d[0] << 7;
     EXPECT_FALSE(negative_ack_packet_.IsValid(boost::asio::buffer(d)));
   }
   {
     // Everything is fine
-    d[0] = 0x80;
+    d[0] = 0x01;
+    d[0] = d[0] << 7;
     d[1] = RudpNegativeAckPacket::kPacketType;
     EXPECT_TRUE(negative_ack_packet_.IsValid(boost::asio::buffer(d)));
   }

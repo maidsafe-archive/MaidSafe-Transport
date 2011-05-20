@@ -35,10 +35,11 @@ namespace transport {
 
 ManagedConnectionMap::ManagedConnectionMap()
     : connections_container_(new ManagedConnectionContainer),
+      notify_down_connection_(),
       shared_mutex_(),
       mutex_(),
       monitoring_mode_(MonitoringMode::kPassive),
-      index_(1501),
+      index_(10000),
       condition_enquiry_(),
       thread_group_(),
       enquiry_index(0) {}

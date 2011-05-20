@@ -37,7 +37,7 @@ namespace dht {
 
 namespace transport {
 
-RudpNegativeAckPacket::RudpNegativeAckPacket() {
+RudpNegativeAckPacket::RudpNegativeAckPacket() : sequence_numbers_() {
   SetType(kPacketType);
 }
 

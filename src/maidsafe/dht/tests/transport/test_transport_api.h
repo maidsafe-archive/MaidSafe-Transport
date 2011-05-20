@@ -66,6 +66,9 @@ typedef std::vector<TransportCondition> Results;
 class TestMessageHandler {
  public:
   explicit TestMessageHandler(const std::string &id);
+
+  virtual ~TestMessageHandler() {}
+
   void DoOnRequestReceived(const std::string &request,
                            const Info &info,
                            std::string *response,
@@ -100,7 +103,7 @@ template <typename T>
 class TransportAPI {
  public:
   TransportAPI();
-  ~TransportAPI();
+  virtual ~TransportAPI();
  protected:
   // Create a transport and an io_service listening on the given or random port
   // (if zero) if listen == true.  If not, only a transport is created, and the
