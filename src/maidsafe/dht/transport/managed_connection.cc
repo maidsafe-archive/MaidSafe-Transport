@@ -75,6 +75,8 @@ boost::uint32_t ManagedConnectionMap::CreateConnection(
 
 boost::uint32_t ManagedConnectionMap::InsertConnection(
     const TransportPtr transport) {
+  if (transport->transport_type() != kRUDP)
+    return -1;
   IP localIP(boost::asio::ip::address_v4::loopback());
   boost::uint32_t peer_port = GenerateConnectionID();
   Endpoint peer(localIP, peer_port);
@@ -107,6 +109,9 @@ boost::uint32_t ManagedConnectionMap::InsertConnection(
     const Endpoint &peer,
     const boost::uint32_t port,
     const bool server_mode) {
+  if (transport->transport_type() != kRUDP)
+    return -1;
+
   boost::uint32_t peer_port = peer.port;
   std::stringstream out;
   out << peer_port;

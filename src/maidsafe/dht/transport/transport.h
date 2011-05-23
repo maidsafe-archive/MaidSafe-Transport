@@ -73,6 +73,12 @@ typedef bptime::time_duration Timeout;
 class MessageHandler;
 class Service;
 
+enum TransportType {
+  kTCP,
+  kUDP,
+  kRUDP
+};
+
 enum TransportCondition {
   kSuccess = 0,
   kError = -1,
@@ -217,6 +223,7 @@ class Transport {
   DataSize kMaxTransportMessageSize() const {
     return kMaxTransportMessageSize_;
   }
+  TransportType transport_type() const { return transport_type_; }
   TransportDetails transport_details() const { return transport_details_; }
   int bootstrap_status() { return bootstrap_status_; }
 //  std::shared_ptr<Service> transport_service() { return transport_service_; }
@@ -227,14 +234,17 @@ class Transport {
    */
   virtual ~Transport() {}
   Transport(boost::asio::io_service &asio_service,  // NOLINT
+            TransportType transport_type = kTCP,
             const DataSize &data_size = 67108864)
-      : asio_service_(asio_service),
+      : transport_type_(transport_type),
+        asio_service_(asio_service),
         listening_port_(0),
         on_message_received_(new OnMessageReceived::element_type),
         on_error_(new OnError::element_type),
         kMaxTransportMessageSize_(data_size),
         transport_details_(),
         bootstrap_status_(-2) {}
+  TransportType transport_type_;
   boost::asio::io_service &asio_service_;
   Port listening_port_;
   OnMessageReceived on_message_received_;

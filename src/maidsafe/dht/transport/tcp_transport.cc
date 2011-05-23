@@ -48,7 +48,7 @@ namespace dht {
 namespace transport {
 
 TcpTransport::TcpTransport(boost::asio::io_service &asio_service)  // NOLINT
-    : Transport(asio_service),
+    : Transport(asio_service, TransportType::kTCP),
       acceptor_(),
       connections_(),
       strand_(asio_service) {}

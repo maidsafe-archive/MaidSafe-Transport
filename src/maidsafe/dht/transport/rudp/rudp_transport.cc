@@ -50,7 +50,7 @@ namespace dht {
 namespace transport {
 
 RudpTransport::RudpTransport(asio::io_service &asio_service)
-  : Transport(asio_service),
+  : Transport(asio_service, TransportType::kRUDP),
     strand_(asio_service),
     multiplexer_(new RudpMultiplexer(asio_service)),
     acceptor_(),

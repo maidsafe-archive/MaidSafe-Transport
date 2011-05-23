@@ -46,7 +46,7 @@ namespace dht {
 namespace transport {
 
 UdpTransport::UdpTransport(asio::io_service &asio_service)  // NOLINT
-  : Transport(asio_service),
+  : Transport(asio_service, TransportType::kUDP),
     strand_(asio_service),
     socket_(),
     read_buffer_(),
