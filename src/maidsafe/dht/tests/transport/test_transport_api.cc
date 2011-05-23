@@ -125,7 +125,7 @@ void TestMessageHandler::DoOnResponseReceived(const std::string &request,
 void TestMessageHandler::DoOnError(const TransportCondition &tc) {
   boost::mutex::scoped_lock lock(mutex_);
   results_.push_back(tc);
-  DLOG(ERROR) << this_id_ << " - Error: " << tc << std::endl;
+  DLOG(INFO) << this_id_ << " - Error: " << tc << std::endl;
   finished_ = true;
 }
 

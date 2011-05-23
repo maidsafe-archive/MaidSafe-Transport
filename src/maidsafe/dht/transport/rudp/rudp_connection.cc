@@ -231,8 +231,9 @@ void RudpConnection::StartReadSize() {
 }
 
 void RudpConnection::HandleReadSize(const bs::error_code &ec) {
+  // As to the state machine model, here a silent terminate is required
   if (Stopped())
-    return CloseOnError(kNoConnection);
+    return Close();
 
   if (ec)
     return CloseOnError(kReceiveFailure);
@@ -248,8 +249,9 @@ void RudpConnection::HandleReadSize(const bs::error_code &ec) {
 }
 
 void RudpConnection::StartReadData() {
-  if (Stopped())
+  if (Stopped()) {
     return CloseOnError(kNoConnection);
+  }
 
   size_t buffer_size = data_received_;
   buffer_size += std::min(socket_.BestReadBufferSize(),
@@ -263,8 +265,9 @@ void RudpConnection::StartReadData() {
 }
 
 void RudpConnection::HandleReadData(const bs::error_code &ec, size_t length) {
-  if (Stopped())
+  if (Stopped()) {
     return CloseOnError(kNoConnection);
+  }
 
   if (ec)
     return CloseOnError(kReceiveFailure);
@@ -339,8 +342,9 @@ void RudpConnection::EncodeData(const std::string &data) {
 }
 
 void RudpConnection::StartWrite() {
-  if (Stopped())
+  if (Stopped()) {
     return CloseOnError(kNoConnection);
+  }
   socket_.AsyncWrite(asio::buffer(buffer_),
                      strand_.wrap(std::bind(&RudpConnection::HandleWrite,
                                             shared_from_this(), arg::_1)));
@@ -349,8 +353,9 @@ void RudpConnection::StartWrite() {
 }
 
 void RudpConnection::HandleWrite(const bs::error_code &ec) {
-  if (Stopped())
-    return CloseOnError(kNoConnection);
+  if (Stopped()) {
+    return Close();
+  }
 
   if (ec)
     return CloseOnError(kSendFailure);
