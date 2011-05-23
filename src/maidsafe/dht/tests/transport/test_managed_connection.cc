@@ -189,6 +189,15 @@ void PrepareConnection(size_t num_of_connections) {
 //   }
 // }
 
+TEST_F(RUDPManagedConnectionTest, BEH_TRANS_ErrorTransportType) {
+  PrepareTransport<UdpTransport>(false, 1);
+  EXPECT_EQ(-1, senders_[0]);
+  PrepareTransport<TcpTransport>(false, 1);
+  EXPECT_EQ(-1, senders_[1]);
+  PrepareTransport<RudpTransport>(false, 1);
+  EXPECT_NE(-1, senders_[2]);
+}
+
 TEST_F(RUDPManagedConnectionTest, BEH_TRANS_OneToManySingleMessage) {
   std::string request(RandomString(1));
   for (int i = 0; i < 4; ++i)
