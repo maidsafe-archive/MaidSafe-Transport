@@ -135,15 +135,17 @@ boost::uint32_t ManagedConnectionMap::InsertConnection(
 
 void ManagedConnectionMap::DoOnConnectionError(
     const TransportCondition &error, const Endpoint peer) {
-  UniqueLock unique_lock(shared_mutex_);
+  UpgradeLock upgrade_lock(shared_mutex_);
   std::stringstream out;
   out << peer.port;
   std::string peer_id = peer.ip.to_string() + ":" + out.str();
   ManagedConnectionContainer::index<TagConnectionPeerId>::type&
       index_by_peer_id = connections_container_->get<TagConnectionPeerId>();
   auto it = index_by_peer_id.find(peer_id);
-  if (it != index_by_peer_id.end())
+  if ((it != index_by_peer_id.end()) && ((*it).is_connected)) {
+    UpgradeToUniqueLock upgrade_unique_lock(upgrade_lock);
     index_by_peer_id.modify(it, ChangeConnectionStatus(false));
+  }
 }
 
 boost::uint32_t ManagedConnectionMap::GenerateConnectionID() {

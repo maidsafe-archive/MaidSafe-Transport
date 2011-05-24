@@ -179,7 +179,7 @@ TEST_F(RUDPManagedConnectionTest, BEH_TRANS_OneToManySingleMessage) {
   EXPECT_EQ(size_t(10), msgh_sender_->responses_received().size());
 }
 
-TEST_F(RUDPManagedConnectionTest, BEH_TRANS_DetectDroppedReceiver) {
+TEST_F(RUDPManagedConnectionTest, BEH_TRANS_PassiveDetectDroppedReceiver) {
   std::string request(RandomString(1));
   for (int i = 0; i < 26; ++i)
     request = request + request;
@@ -199,6 +199,8 @@ TEST_F(RUDPManagedConnectionTest, BEH_TRANS_DetectDroppedReceiver) {
         managed_connections_.GetConnection(
             listening_ports_[0])->StopListening();
   }
+  managed_connections_.RemoveConnection(senders_[0]);
+  boost::this_thread::sleep(boost::posix_time::milliseconds(10));
   EXPECT_GT(10, waited_seconds);
 }
 
