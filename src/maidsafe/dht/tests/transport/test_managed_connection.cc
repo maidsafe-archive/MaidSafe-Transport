@@ -143,64 +143,6 @@ void PrepareConnection(size_t num_of_connections) {
 
 };
 
-/** listener->StartListen(), then sender->Send(), then sender->StartListen()
- *  the sender->startListen will gnerate a socket binding error */
-TEST_F(RUDPManagedConnectionTest, BEH_TRANS_BiDirectionCommunicate) {
-  TransportPtr sender(new RudpTransport(*this->asio_service_));
-  TransportPtr listener(new RudpTransport(*this->asio_service_));
-  EXPECT_EQ(kSuccess, sender->StartListening(Endpoint(kIP, 2000)));
-  EXPECT_EQ(kSuccess, listener->StartListening(Endpoint(kIP, 2001)));
-  TestMessageHandlerPtr msgh_sender(new MCTestMessageHandler("Sender"));
-  TestMessageHandlerPtr msgh_listener(new MCTestMessageHandler("listener"));
-  sender->on_error()->connect(
-      boost::bind(&TestMessageHandler::DoOnError, msgh_sender, _1));
-  listener->on_error()->connect(
-      boost::bind(&TestMessageHandler::DoOnError, msgh_listener, _1));
-  {
-    // Send from sender to listener
-    auto sender_conn =
-        sender->on_message_received()->connect(
-            boost::bind(&TestMessageHandler::DoOnResponseReceived, msgh_sender,
-                        _1, _2, _3, _4));
-    auto listener_conn =
-        listener->on_message_received()->connect(
-            boost::bind(&TestMessageHandler::DoOnRequestReceived, msgh_listener,
-                        _1, _2, _3, _4));
-    sender->Send("from sender", Endpoint(kIP, listener->listening_port()),
-                 bptime::seconds(26));
-    boost::this_thread::sleep(boost::posix_time::milliseconds(100));
-    // Connections need to be disconnected to ensure in the later part of the
-    // test, the signal will not notify multiple handlers
-    sender_conn.disconnect();
-    listener_conn.disconnect();
-  }
-  {
-    // Send from listener to sender
-    auto sender_conn =
-        sender->on_message_received()->connect(
-            boost::bind(&TestMessageHandler::DoOnRequestReceived, msgh_sender,
-                        _1, _2, _3, _4));
-    auto listener_conn =
-        listener->on_message_received()->connect(
-            boost::bind(&TestMessageHandler::DoOnResponseReceived, msgh_listener,
-                        _1, _2, _3, _4));
-    listener->Send("from listener", Endpoint(kIP, sender->listening_port()),
-                 bptime::seconds(26));
-    boost::this_thread::sleep(boost::posix_time::milliseconds(100));
-  }
-  int waited_seconds(0);
-  while (((msgh_listener->requests_received().size() == 0) ||
-          (msgh_sender->requests_received().size() == 0)) &&
-          (waited_seconds < 3)) {
-    boost::this_thread::sleep(boost::posix_time::milliseconds(1000));
-    ++ waited_seconds;
-  }
-  EXPECT_EQ(1, msgh_listener->requests_received().size());
-  EXPECT_EQ(1, msgh_listener->responses_received().size());
-  EXPECT_EQ(1, msgh_sender->requests_received().size());
-  EXPECT_EQ(1, msgh_sender->responses_received().size());
-}
-
 TEST_F(RUDPManagedConnectionTest, BEH_TRANS_ErrorTransportType) {
   PrepareTransport<UdpTransport>(false, 1);
   EXPECT_EQ(-1, senders_[0]);
