@@ -410,6 +410,24 @@ void TransportAPI<T>::CheckMessages() {
   }
 }
 
+void RUDPSingleTransportAPITest::RestoreRUDPGlobalSettings() {
+  RudpParameters::kDefaultWindowSize = 16;
+  RudpParameters::kMaximumWindowSize = 512;
+  RudpParameters::kDefaultSize = 1480;
+  RudpParameters::kMaxSize = 25980;
+  RudpParameters::kDefaultDataSize = 1450;
+  RudpParameters::kMaxDataSize = 25950;
+  RudpParameters::kDefaultSendTimeOut = bptime::milliseconds(1000);
+  RudpParameters::kDefaultReceiveTimeOut = bptime::milliseconds(200);
+  RudpParameters::kDefaultAckTimeOut = bptime::milliseconds(1000);
+  RudpParameters::kDefaultSendDelay = bptime::microseconds(1000);
+  RudpParameters::kDefaultReceiveDelay = bptime::milliseconds(100);
+  RudpParameters::kAckInterval = bptime::milliseconds(100);
+  RudpParameters::kConnectionType = RudpParameters::ConnectionType::kWireless;
+  RudpParameters::kSpeedCalculateInverval = bptime::milliseconds(1000);
+  RudpParameters::SlowSpeedThreshold = 1024;  // b/s
+  RudpParameters::kClientConnectTimeOut = bptime::milliseconds(1000);
+}
 
 TYPED_TEST_P(TransportAPITest, BEH_TRANS_StartStopListening) {
   TransportPtr transport(new TypeParam(*this->asio_service_));
@@ -862,6 +880,7 @@ TEST_F(RUDPSingleTransportAPITest, BEH_TRANS_SlowReceiveSpeed) {
     }
     EXPECT_GT(3, waited_seconds);
   }
+  RestoreRUDPGlobalSettings();
 }
 
 INSTANTIATE_TEST_CASE_P(ConfigurableTraffic, RUDPConfigurableTransportAPITest,

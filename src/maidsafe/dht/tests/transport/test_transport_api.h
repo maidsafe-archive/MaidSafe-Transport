@@ -139,6 +139,7 @@ class TransportAPITest : public TransportAPI<T>, public ::testing::Test {
 class RUDPSingleTransportAPITest : public TransportAPITest<RudpTransport> {
  public:
   RUDPSingleTransportAPITest() {}
+  void RestoreRUDPGlobalSettings();
 };
 
 class RUDPConfigurableTransportAPITest
