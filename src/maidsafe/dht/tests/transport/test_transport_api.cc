@@ -720,12 +720,16 @@ TEST_F(RUDPSingleTransportAPITest, BEH_TRANS_OneToOneSeqMultipleLargeMessage) {
             msgh_sender->responses_received().at(0).first);
 }
 
-// TEST_F(RUDPSingleTransportAPITest, BEH_TRANS_OneToOneSimMultipleLargeMessage) {
-//   this->SetupTransport(false, 0);
-//   this->SetupTransport(true, 0);
-//   // Send out a bunch of messages simultaneously, each one is 16MB = 2^24
-//   ASSERT_NO_FATAL_FAILURE(this->RunTransportTest(5, 24));
-// }
+TEST_F(RUDPSingleTransportAPITest, BEH_TRANS_OneToOneSimMultipleLargeMessage) {
+  this->SetupTransport(false, 0);
+  this->SetupTransport(true, 0);
+  // Send out a bunch of messages simultaneously, each one is 4MB = 2^22
+  // *** up to 4 request can be sent out simultaneously (with 4MB msg size)
+  // *** up to 4MB msg size can be sent out successfully
+  // *** these limitations are due to timeouts for message handler to handle
+  // *** response message
+  ASSERT_NO_FATAL_FAILURE(this->RunTransportTest(4, 22));
+}
 
 TEST_F(RUDPSingleTransportAPITest, BEH_TRANS_DetectDroppedReceiver) {
   // Prevent the low speed detection will terminate the test earlier
