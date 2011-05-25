@@ -261,9 +261,14 @@ RudpParameters::kClientConnectTimeOut = bptime::milliseconds(1000);
     ++waited_seconds;
     for (int i = 0; i < 5; ++i) {
       stopping = RandomUint32() % num_connection;
-      managed_connections_.GetConnection(
-          listening_ports_[stopping])->StopListening();
-      dropped_connections_index.push_back(stopping);
+      auto it = std::find(dropped_connections_index.begin(),
+                          dropped_connections_index.end(),
+                          stopping);
+      if (it != dropped_connections_index.end()) {
+        managed_connections_.GetConnection(
+            listening_ports_[stopping])->StopListening();
+        dropped_connections_index.push_back(stopping);
+      }
     }
   }
   // ensure the dropped connection will be detected, as the round-robbin only
