@@ -37,9 +37,9 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "boost/thread/thread.hpp"
 #include "maidsafe/common/test.h"
 #include "maidsafe/transport/transport.h"
-#include "maidsafe/dht/transport/tcp_transport.h"
-#include "maidsafe/dht/transport/rudp/rudp_transport.h"
-#include "maidsafe/dht/transport/udp_transport.h"
+#include "maidsafe/transport/tcp_transport.h"
+#include "maidsafe/transport/rudp/rudp_transport.h"
+#include "maidsafe/transport/udp_transport.h"
 
 namespace maidsafe {
 

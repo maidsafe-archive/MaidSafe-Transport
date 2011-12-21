@@ -53,7 +53,7 @@ namespace maidsafe {
 namespace transport {
 
 TcpTransport::TcpTransport(boost::asio::io_service &asio_service)  // NOLINT
-    : Transport(asio_service, TransportType::kTCP),
+    : Transport(asio_service, kTCP),
       acceptor_(),
       connections_(),
       strand_(asio_service) {}
