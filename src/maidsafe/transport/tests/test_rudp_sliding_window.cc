@@ -33,8 +33,6 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 namespace maidsafe {
 
-namespace dht {
-
 namespace transport {
 
 namespace test {
@@ -78,7 +76,5 @@ TEST(RudpSlidingWindowTest, BEH_Wraparound) {
 }  // namespace test
 
 }  // namespace transport
-
-}  // namespace dht
 
 }  // namespace maidsafe

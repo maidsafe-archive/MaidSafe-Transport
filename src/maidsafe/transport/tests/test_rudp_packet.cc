@@ -40,8 +40,6 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 namespace maidsafe {
 
-namespace dht {
-
 namespace transport {
 
 namespace test {
@@ -230,7 +228,7 @@ class RudpControlPacketTest : public testing::Test {
     EXPECT_EQ(0xffffffff, control_packet_.AdditionalInfo());
   }
 
-  void SetType(boost::uint32_t n) {
+  void SetType(boost::uint16_t n) {
     control_packet_.SetType(n);
   }
 
@@ -720,7 +718,5 @@ TEST_F(RudpNegativeAckPacketTest, BEH_EncodeDecode) {
 }  // namespace test
 
 }  // namespace transport
-
-}  // namespace dht
 
 }  // namespace maidsafe

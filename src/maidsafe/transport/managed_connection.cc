@@ -98,14 +98,14 @@ boost::int32_t ManagedConnectionMap::InsertConnection(
 boost::int32_t ManagedConnectionMap::InsertConnection(
     const TransportPtr transport,
     const Endpoint &peer,
-    const boost::uint32_t port) {
+    const boost::uint16_t port) {
   return InsertConnection(transport, peer, port, false);
 }
 
 boost::int32_t ManagedConnectionMap::InsertConnection(
     const TransportPtr transport,
     const Endpoint &peer,
-    const boost::uint32_t port,
+    const boost::uint16_t port,
     const bool server_mode) {
   if (transport->transport_type() != kRUDP)
     return -1;
@@ -146,7 +146,7 @@ void ManagedConnectionMap::DoOnConnectionError(
   }
 }
 
-boost::uint32_t ManagedConnectionMap::GenerateConnectionID() {
+boost::uint16_t ManagedConnectionMap::GenerateConnectionID() {
   ManagedConnectionContainer::index<TagConnectionId>::type&
       index_by_connection_id = connections_container_->get<TagConnectionId>();
   ++index_;

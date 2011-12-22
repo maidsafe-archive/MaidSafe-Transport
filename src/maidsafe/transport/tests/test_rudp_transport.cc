@@ -26,11 +26,9 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 #include "maidsafe/transport/rudp/rudp_transport.h"
-#include "maidsafe/tests/transport/test_transport_api.h"
+#include "maidsafe/transport/tests/transport_api_test.h"
 
 namespace maidsafe {
-
-namespace dht {
 
 namespace transport {
 
@@ -41,7 +39,5 @@ namespace test {
 }  // namespace test
 
 }  // namespace transport
-
-}  // namespace dht
 
 }  // namespace maidsafe

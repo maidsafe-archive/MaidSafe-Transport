@@ -42,8 +42,6 @@ namespace arg = std::placeholders;
 
 namespace maidsafe {
 
-namespace dht {
-
 namespace transport {
 
 namespace test {
@@ -143,7 +141,5 @@ TEST(RudpSocketTest, BEH_Socket) {
 }  // namespace test
 
 }  // namespace transport
-
-}  // namespace dht
 
 }  // namespace maidsafe

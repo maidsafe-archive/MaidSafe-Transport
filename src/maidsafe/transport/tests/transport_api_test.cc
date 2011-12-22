@@ -65,8 +65,7 @@ bptime::time_duration RudpParameters::kDefaultReceiveDelay =
                                                     bptime::milliseconds(100);
 bptime::time_duration RudpParameters::kAckInterval =
                                                     bptime::milliseconds(100);
-RudpParameters::ConnectionType RudpParameters::kConnectionType =
-                                 RudpParameters::ConnectionType::kWireless;
+RudpParameters::ConnectionType RudpParameters::kConnectionType = kWireless;
 bptime::time_duration RudpParameters::kSpeedCalculateInverval =
                                                     bptime::milliseconds(1000);
 boost::uint32_t RudpParameters::SlowSpeedThreshold = 1024;  // b/s
@@ -574,8 +573,8 @@ INSTANTIATE_TYPED_TEST_CASE_P(UDP, TransportAPITest, UdpTransport);
 /** listener->StartListen(), then sender->Send(), then sender->StartListen()
  *  the sender->startListen will gnerate a socket binding error */
 TEST_F(RUDPSingleTransportAPITest, BEH_TRANS_BiDirectionCommunicate) {
-  TransportPtr sender(new RudpTransport(*this->asio_service_));
-  TransportPtr listener(new RudpTransport(*this->asio_service_));
+  TransportPtr sender(new RudpTransport(this->asio_service_));
+  TransportPtr listener(new RudpTransport(this->asio_service_));
   EXPECT_EQ(kSuccess, sender->StartListening(Endpoint(kIP, 2000)));
   EXPECT_EQ(kSuccess, listener->StartListening(Endpoint(kIP, 2001)));
   TestMessageHandlerPtr msgh_sender(new TestMessageHandler("Sender"));
@@ -639,8 +638,8 @@ TEST_F(RUDPSingleTransportAPITest, BEH_TRANS_BiDirectionDuplexCommunicate) {
     listen_request = listen_request + listen_request;
   }
 
-  TransportPtr sender(new RudpTransport(*this->asio_service_));
-  TransportPtr listener(new RudpTransport(*this->asio_service_));
+  TransportPtr sender(new RudpTransport(this->asio_service_));
+  TransportPtr listener(new RudpTransport(this->asio_service_));
   EXPECT_EQ(kSuccess, sender->StartListening(Endpoint(kIP, 2000)));
   EXPECT_EQ(kSuccess, listener->StartListening(Endpoint(kIP, 2001)));
   TestMessageHandlerPtr msgh_sender(new TestMessageHandler("Sender"));
@@ -692,8 +691,8 @@ TEST_F(RUDPSingleTransportAPITest, BEH_TRANS_OneToOneSingleLargeMessage) {
 }
 
 TEST_F(RUDPSingleTransportAPITest, BEH_TRANS_OneToOneSeqMultipleLargeMessage) {
-  TransportPtr sender(new RudpTransport(*this->asio_service_));
-  TransportPtr listener(new RudpTransport(*this->asio_service_));
+  TransportPtr sender(new RudpTransport(this->asio_service_));
+  TransportPtr listener(new RudpTransport(this->asio_service_));
   EXPECT_EQ(kSuccess, listener->StartListening(Endpoint(kIP, 2001)));
   TestMessageHandlerPtr msgh_sender(new TestMessageHandler("Sender"));
   TestMessageHandlerPtr msgh_listener(new TestMessageHandler("listener"));
@@ -743,8 +742,8 @@ TEST_F(RUDPSingleTransportAPITest, BEH_TRANS_DetectDroppedReceiver) {
   // Prevent the low speed detection will terminate the test earlier
   RudpParameters::kSpeedCalculateInverval = bptime::seconds(100);
 
-  TransportPtr sender(new RudpTransport(*this->asio_service_));
-  TransportPtr listener(new RudpTransport(*this->asio_service_));
+  TransportPtr sender(new RudpTransport(this->asio_service_));
+  TransportPtr listener(new RudpTransport(this->asio_service_));
   EXPECT_EQ(kSuccess, listener->StartListening(Endpoint(kIP, 2000)));
   TestMessageHandlerPtr msgh_sender(new TestMessageHandler("Sender"));
   TestMessageHandlerPtr msgh_listener(new TestMessageHandler("listener"));
@@ -775,8 +774,8 @@ TEST_F(RUDPSingleTransportAPITest, BEH_TRANS_DetectDroppedSender) {
   // Prevent the low speed detection will terminate the test earlier
   RudpParameters::kSpeedCalculateInverval = bptime::seconds(100);
 
-  TransportPtr sender(new RudpTransport(*this->asio_service_));
-  TransportPtr listener(new RudpTransport(*this->asio_service_));
+  TransportPtr sender(new RudpTransport(this->asio_service_));
+  TransportPtr listener(new RudpTransport(this->asio_service_));
   EXPECT_EQ(kSuccess, listener->StartListening(Endpoint(kIP, 2000)));
   TestMessageHandlerPtr msgh_sender(new TestMessageHandler("Sender"));
   TestMessageHandlerPtr msgh_listener(new TestMessageHandler("listener"));
@@ -808,8 +807,8 @@ TEST_F(RUDPSingleTransportAPITest, BEH_TRANS_SlowSendSpeed) {
   // need to reset here
   RudpParameters::kSpeedCalculateInverval = bptime::seconds(1);
 
-  TransportPtr sender(new RudpTransport(*this->asio_service_));
-  TransportPtr listener(new RudpTransport(*this->asio_service_));
+  TransportPtr sender(new RudpTransport(this->asio_service_));
+  TransportPtr listener(new RudpTransport(this->asio_service_));
   EXPECT_EQ(kSuccess, listener->StartListening(Endpoint(kIP, 2010)));
   TestMessageHandlerPtr msgh_sender(new TestMessageHandler("Sender"));
   TestMessageHandlerPtr msgh_listener(new TestMessageHandler("listener"));
@@ -854,8 +853,8 @@ TEST_F(RUDPSingleTransportAPITest, BEH_TRANS_SlowReceiveSpeed) {
   // need to reset here
   RudpParameters::kSpeedCalculateInverval = bptime::seconds(1);
 
-  TransportPtr sender(new RudpTransport(*this->asio_service_));
-  TransportPtr listener(new RudpTransport(*this->asio_service_));
+  TransportPtr sender(new RudpTransport(this->asio_service_));
+  TransportPtr listener(new RudpTransport(this->asio_service_));
   EXPECT_EQ(kSuccess, listener->StartListening(Endpoint(kIP, 2100)));
   TestMessageHandlerPtr msgh_sender(new TestMessageHandler("Sender"));
   TestMessageHandlerPtr msgh_listener(new TestMessageHandler("listener"));

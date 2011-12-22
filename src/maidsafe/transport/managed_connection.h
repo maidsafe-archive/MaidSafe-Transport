@@ -155,10 +155,10 @@ class ManagedConnectionMap  {
   boost::int32_t InsertConnection(const TransportPtr transport);
   boost::int32_t InsertConnection(const TransportPtr transport,
                                    const Endpoint &peer,
-                                   const boost::uint32_t port);
+                                   const boost::uint16_t port);
   boost::int32_t InsertConnection(const TransportPtr transport,
                                    const Endpoint &peer,
-                                   const boost::uint32_t port,
+                                   const boost::uint16_t port,
                                    const bool server_mode);
 
   // Remove a managed connection based on the node_id
@@ -188,11 +188,11 @@ class ManagedConnectionMap  {
   NotifyDownConnectionPtr notify_down_connection();
 
   /** Return next available port */
-  boost::uint32_t NextEmptyPort() { return GenerateConnectionID(); }
+  boost::uint16_t NextEmptyPort() { return GenerateConnectionID(); }
 
  private:
   /** Generate next unique empty connection ID */
-  boost::uint32_t GenerateConnectionID();
+  boost::uint16_t GenerateConnectionID();
 
   /** Check if the input peer_id already contained in the multi-index */
   bool HasPeerId(const std::string &peer_id);
@@ -216,7 +216,7 @@ class ManagedConnectionMap  {
   /** Flag of monitoring mode */
   MonitoringMode monitoring_mode_;
   /** Global Counter used as an connection ID for each added transport */
-  boost::uint32_t index_;
+  boost::uint16_t index_;
   /** Conditional Variable to wait/notify the thread monitoring function*/
   boost::condition_variable condition_enquiry_;
   /** The thread group to hold all monitoring treads

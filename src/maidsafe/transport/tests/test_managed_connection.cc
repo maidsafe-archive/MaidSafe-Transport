@@ -78,7 +78,7 @@ class RUDPManagedConnectionTest : public TransportAPITest<RudpTransport> {
       msgh_sender_(new MCTestMessageHandler("Sender")),
       msgh_listener_(new MCTestMessageHandler("listener")) {}
   ManagedConnectionMap managed_connections_;
-  std::vector<boost::uint32_t> senders_;
+  std::vector<boost::int32_t> senders_;
   std::vector<boost::uint32_t> listening_ports_;
   MCTestMessageHandlerPtr msgh_sender_;
   MCTestMessageHandlerPtr msgh_listener_;
@@ -114,11 +114,11 @@ void PrepareTransport(bool listen, size_t num_of_connections) {
 template <typename T>
 void PrepareConnection(size_t num_of_connections) {
   for (size_t i = 0; i < num_of_connections; ++i) {
-    boost::uint32_t port1 = managed_connections_.NextEmptyPort();
-    boost::uint32_t port2 = managed_connections_.NextEmptyPort();
+    boost::uint16_t port1 = managed_connections_.NextEmptyPort();
+    boost::uint16_t port2 = managed_connections_.NextEmptyPort();
 
     TransportPtr transport_listen;
-      transport_listen = TransportPtr(new T(*asio_service_));
+      transport_listen = TransportPtr(new T(asio_service_));
     transport_listen->on_message_received()->connect(
         boost::bind(&MCTestMessageHandler::DoOnRequestReceived,
                     msgh_listener_, _1, _2, _3, _4));
@@ -130,7 +130,7 @@ void PrepareConnection(size_t num_of_connections) {
     listening_ports_.push_back(port1);
 
     TransportPtr transport_send;
-      transport_send = TransportPtr(new T(*asio_service_1_));
+      transport_send = TransportPtr(new T(asio_service_1_));
     transport_send->on_message_received()->connect(
         boost::bind(&MCTestMessageHandler::DoOnResponseReceived,
                     msgh_sender_, _1, _2, _3, _4));
