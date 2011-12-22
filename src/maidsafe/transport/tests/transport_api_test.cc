@@ -426,7 +426,7 @@ void RUDPSingleTransportAPITest::RestoreRUDPGlobalSettings() {
   RudpParameters::kDefaultSendDelay = bptime::microseconds(1000);
   RudpParameters::kDefaultReceiveDelay = bptime::milliseconds(100);
   RudpParameters::kAckInterval = bptime::milliseconds(100);
-  RudpParameters::kConnectionType = RudpParameters::ConnectionType::kWireless;
+  RudpParameters::kConnectionType = RudpParameters::kWireless;
   RudpParameters::kSpeedCalculateInverval = bptime::milliseconds(1000);
   RudpParameters::SlowSpeedThreshold = 1024;  // b/s
   RudpParameters::kClientConnectTimeOut = bptime::milliseconds(1000);
