@@ -103,6 +103,7 @@ class RudpConnection : public std::enable_shared_from_this<RudpConnection> {
   void CloseOnError(const TransportCondition &error);
 
   std::weak_ptr<RudpTransport> transport_;
+  bool managed_;
   boost::asio::io_service::strand strand_;
   std::shared_ptr<RudpMultiplexer> multiplexer_;
   RudpSocket socket_;

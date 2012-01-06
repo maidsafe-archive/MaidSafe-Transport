@@ -55,6 +55,7 @@ RudpConnection::RudpConnection(const std::shared_ptr<RudpTransport> &transport,
                                const std::shared_ptr<RudpMultiplexer> &multiplexer,
                                const ip::udp::endpoint &remote)
   : transport_(transport),
+    managed_(false),
     strand_(strand),
     multiplexer_(multiplexer),
     socket_(*multiplexer_),
@@ -280,7 +281,8 @@ void RudpConnection::HandleReadData(const bs::error_code &ec, size_t length) {
     if (data_size_ == 5) {
       std::string temp(buffer_.begin(), buffer_.end());
       if (temp == "Alive") {
-        Close();
+        if (!managed_)
+          Close();
         return;
       }
     }
@@ -311,7 +313,8 @@ void RudpConnection::DispatchMessage() {
                                        info, &response,
                                        &response_timeout);
     if (response.empty()) {
-      Close();
+      if (!managed_)
+        Close();
       return;
     }
 

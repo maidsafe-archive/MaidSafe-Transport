@@ -86,6 +86,7 @@ class RUDPManagedConnectionTest : public TransportAPITest<RudpTransport> {
 template <typename T>
 void PrepareTransport(bool listen, size_t num_of_connections) {
   for (size_t i = 0; i < num_of_connections; ++i) {
+    std::string reference_id(RandomString(64));
     if (listen) {
       TransportPtr transport1;
         transport1 = TransportPtr(new T(asio_service_));
@@ -94,7 +95,8 @@ void PrepareTransport(bool listen, size_t num_of_connections) {
                       msgh_listener_, _1, _2, _3, _4));
       transport1->on_error()->connect(
           boost::bind(&MCTestMessageHandler::DoOnError, msgh_listener_, _1));
-      boost::uint32_t port = managed_connections_.InsertConnection(transport1);
+      boost::uint32_t port =
+          managed_connections_.InsertConnection(transport1, reference_id);
       EXPECT_EQ(kSuccess,
                 transport1->StartListening(Endpoint(kIP, static_cast<uint16_t>(port))));
       listening_ports_.push_back(port);
@@ -106,7 +108,8 @@ void PrepareTransport(bool listen, size_t num_of_connections) {
                       msgh_sender_, _1, _2, _3, _4));
       transport1->on_error()->connect(
           boost::bind(&MCTestMessageHandler::DoOnError, msgh_sender_, _1));
-      senders_.push_back(managed_connections_.InsertConnection(transport1));
+      senders_.push_back(managed_connections_.InsertConnection(transport1,
+                                                               reference_id));
     }
   }
 }
@@ -122,8 +125,9 @@ void PrepareConnection(size_t num_of_connections) {
     transport_listen->on_message_received()->connect(
         boost::bind(&MCTestMessageHandler::DoOnRequestReceived,
                     msgh_listener_, _1, _2, _3, _4));
+    std::string reference_id(RandomString(64));
     managed_connections_.InsertConnection(transport_listen,
-                                          Endpoint(kIP, port2),
+                                          Endpoint(kIP, port2), reference_id,
                                           port1, true);
     EXPECT_EQ(kSuccess,
               transport_listen->StartListening(Endpoint(kIP, port1)));
@@ -134,9 +138,10 @@ void PrepareConnection(size_t num_of_connections) {
     transport_send->on_message_received()->connect(
         boost::bind(&MCTestMessageHandler::DoOnResponseReceived,
                     msgh_sender_, _1, _2, _3, _4));
+    reference_id = RandomString(64);
     senders_.push_back(managed_connections_.InsertConnection(transport_send,
                                                         Endpoint(kIP, port1),
-                                                        port2));
+                                                        reference_id, port2));
   }
 }
 

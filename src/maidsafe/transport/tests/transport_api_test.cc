@@ -785,7 +785,7 @@ TEST_F(RUDPSingleTransportAPITest, BEH_TRANS_DetectDroppedSender) {
       boost::bind(&TestMessageHandler::DoOnError, msgh_listener, _1));
 
   std::string request(RandomString(1));
-  for (int i = 0; i < 26; ++i)
+  for (int i = 0; i < 23; ++i)
     request = request + request;
   {
     // Detect a dropped connection while receiving (sender dropped)
@@ -796,7 +796,7 @@ TEST_F(RUDPSingleTransportAPITest, BEH_TRANS_DetectDroppedSender) {
       boost::this_thread::sleep(boost::posix_time::milliseconds(1000));
       ++ waited_seconds;
       if (waited_seconds == 1)
-          sender->StopListening();
+        sender->StopListening();
     }
     EXPECT_GT(10, waited_seconds);
   }
@@ -833,7 +833,7 @@ TEST_F(RUDPSingleTransportAPITest, BEH_TRANS_SlowSendSpeed) {
   RudpParameters::SlowSpeedThreshold = 200000;
 
   std::string request(RandomString(1));
-  for (int i = 0; i < 26; ++i)
+  for (int i = 0; i < 22; ++i)
     request = request + request;
   {
     // Detect a dropped connection while sending (receiver dropped)
@@ -878,7 +878,7 @@ TEST_F(RUDPSingleTransportAPITest, BEH_TRANS_SlowReceiveSpeed) {
   RudpParameters::SlowSpeedThreshold = 371200;
 
   std::string request(RandomString(1));
-  for (int i = 0; i < 26; ++i)
+  for (int i = 0; i < 23; ++i)
     request = request + request;
   {
     // Detect a dropped connection while sending (receiver dropped)
