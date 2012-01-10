@@ -54,6 +54,7 @@ namespace transport {
 class RudpMultiplexer;
 class RudpSocket;
 class RudpTransport;
+class ManagedConnectionMap;
 
 class RudpConnection : public std::enable_shared_from_this<RudpConnection> {
  public:
@@ -102,6 +103,9 @@ class RudpConnection : public std::enable_shared_from_this<RudpConnection> {
   void EncodeData(const std::string &data);
   void CloseOnError(const TransportCondition &error);
 
+  friend class ManagedConnectionMap;
+  void SetManaged(bool managed);
+
   std::weak_ptr<RudpTransport> transport_;
   bool managed_;
   boost::asio::io_service::strand strand_;
@@ -115,6 +119,8 @@ class RudpConnection : public std::enable_shared_from_this<RudpConnection> {
   Timeout timeout_for_response_;
   enum TimeoutState { kNoTimeout, kSending, kReceiving } timeout_state_;
 };
+
+typedef std::shared_ptr<RudpConnection> ConnectionPtr;
 
 }  // namespace transport
 

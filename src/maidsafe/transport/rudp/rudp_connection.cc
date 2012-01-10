@@ -254,7 +254,7 @@ void RudpConnection::StartReadData() {
 
   size_t buffer_size = data_received_;
   buffer_size += std::min(socket_.BestReadBufferSize(),
-                          data_size_ - data_received_);
+                          static_cast<uint32_t>(data_size_ - data_received_));
   buffer_.resize(buffer_size);
   asio::mutable_buffer data_buffer = asio::buffer(buffer_) + data_received_;
   socket_.AsyncRead(asio::buffer(data_buffer), 1,
@@ -377,6 +377,10 @@ void RudpConnection::CloseOnError(const TransportCondition &error) {
     (*transport->on_error_)(error, ep);
   }
   DoClose();
+}
+
+void RudpConnection::SetManaged(bool managed) {
+  managed_ = managed;
 }
 
 }  // namespace transport

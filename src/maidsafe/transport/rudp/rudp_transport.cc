@@ -169,7 +169,6 @@ void RudpTransport::DoSend(const std::string &data,
   ConnectionPtr connection(std::make_shared<RudpConnection>(shared_from_this(),
                                                             strand_,
                                                             multiplexer_, ep));
-
   DoInsertConnection(connection);
   connection->StartSending(data, timeout);
 }
@@ -190,6 +189,15 @@ void RudpTransport::RemoveConnection(ConnectionPtr connection) {
 
 void RudpTransport::DoRemoveConnection(ConnectionPtr connection) {
   connections_.erase(connection);
+}
+
+ConnectionPtr RudpTransport::GetConnection(const Endpoint &endpoint) {
+  for (auto iter(connections_.begin()); iter != connections_.end(); iter++) {
+    if (((*iter)->Socket().RemoteEndpoint().address() == endpoint.ip) &&
+      (((*iter)->Socket().RemoteEndpoint().port() == endpoint.port)))
+      return (*iter);
+  }
+  return ConnectionPtr();
 }
 
 }  // namespace transport

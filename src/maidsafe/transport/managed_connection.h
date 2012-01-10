@@ -42,6 +42,7 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 //  #include "maidsafe/dht/kademlia/config.h"
 #include "maidsafe/transport/transport.h"
+#include "maidsafe/transport/managed_connection_rpc.h"
 
 namespace maidsafe  {
 
@@ -49,7 +50,7 @@ namespace transport {
 
 class RudpConnection;
 
-typedef std::shared_ptr<Transport> TransportPtr;
+//typedef std::shared_ptr<Transport> TransportPtr;
 typedef std::shared_ptr<RudpConnection> ConnectionPtr;
 
 // Maximum number of bytes to read at a time
@@ -133,6 +134,8 @@ typedef std::shared_ptr<boost::signals2::signal<void(const std::string&)>>
 typedef std::shared_ptr<boost::signals2::signal<void(const boost::uint32_t&)>>
     NotifyDownByConnectionIdPtr;
 
+typedef std::function<void(const uint32_t&)> CreateConnectionCallback;
+
 // This class holds the managed connections, monitoring the connection status
 // Two monitoring methods provided:
 //      Passive mode: waiting for the signal notification from the transport
@@ -146,7 +149,8 @@ typedef std::shared_ptr<boost::signals2::signal<void(const boost::uint32_t&)>>
 // as ConnectionId directly.
 class ManagedConnectionMap  {
  public:
-  ManagedConnectionMap(std::string &ref_id);
+  ManagedConnectionMap(boost::asio::io_service &io_service,
+                       const std::string &ref_id);
 
   ~ManagedConnectionMap();
 
@@ -162,7 +166,7 @@ class ManagedConnectionMap  {
   // The connection_id will be returned
 
   boost::int32_t CreateConnection(const Endpoint &peer,
-                                  const std::string &reference_id);
+                                  CreateConnectionCallback callback);
   boost::int32_t InsertIncomingConnection(const Endpoint &peer,
                                           const std::string &reference_id);
 
@@ -242,8 +246,12 @@ class ManagedConnectionMap  {
   /** Check if the input reference_id already contained in the multi-index */
   bool HasReferenceId(const std::string &reference_id);
 
-  Endpoint SendManagedConnectionReq(TransportPtr transport,
+  void SendManagedConnectionReq(TransportPtr transport,
                                     const Endpoint &peer);
+  void ManagedConnectionReqCallback(
+      const uint32_t &transport_condition, const Endpoint &endpoint,
+      const std::string& reference_id, TransportPtr transport,
+      CreateConnectionCallback callback);
   /** Handle connection error, mark corresponding connection to be DOWN */
   void DoOnConnectionError(const TransportCondition &error,
                            const Endpoint peer);
@@ -281,6 +289,9 @@ class ManagedConnectionMap  {
   typedef boost::unique_lock<boost::shared_mutex> UniqueLock;
   typedef boost::upgrade_to_unique_lock<boost::shared_mutex>
       UpgradeToUniqueLock;
+
+  boost::asio::io_service &asio_service_;
+  std::shared_ptr<ManagedConnectionRpcs> rpcs_;
 };
 
 }  // namespace transport

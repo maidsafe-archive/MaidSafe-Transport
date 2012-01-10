@@ -32,7 +32,7 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <string>
 #include <vector>
 #include <utility>
-#include "gtest/gtest-param-test.h"
+//#include "gtest/gtest-param-test.h"
 #include "boost/thread/mutex.hpp"
 #include "boost/thread/thread.hpp"
 #include "maidsafe/common/test.h"

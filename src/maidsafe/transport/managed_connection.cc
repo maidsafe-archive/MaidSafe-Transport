@@ -27,12 +27,17 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "maidsafe/transport/managed_connection.h"
 #include "maidsafe/transport/rudp/rudp_connection.h"
+#include "maidsafe/transport/transport.pb.h"
+
+namespace arg = std::placeholders;
 
 namespace maidsafe {
 
 namespace transport {
 
-ManagedConnectionMap::ManagedConnectionMap(std::string &ref_id)
+ManagedConnectionMap::ManagedConnectionMap(
+    boost::asio::io_service &io_service,
+    const std::string &ref_id)
     : ref_id_(ref_id),
       connections_container_(new ManagedConnectionContainer),
       notify_down_by_peer_id_(),
@@ -44,7 +49,9 @@ ManagedConnectionMap::ManagedConnectionMap(std::string &ref_id)
       index_(10000),
       condition_enquiry_(),
       thread_group_(),
-      enquiry_index(0) {}
+      enquiry_index(0),
+      asio_service_(io_service),
+      rpcs_(new ManagedConnectionRpcs()) {}
 
 ManagedConnectionMap::~ManagedConnectionMap() {
   monitoring_mode_ = kPassive;
@@ -67,23 +74,32 @@ ManagedConnectionMap::~ManagedConnectionMap() {
 //  }
 //}
 
-boost::int32_t ManagedConnectionMap::CreateConnection(
-    const Endpoint &peer,
-    const std::string &reference_id) {
-
+boost::int32_t ManagedConnectionMap::CreateConnection(const Endpoint &peer,
+    CreateConnectionCallback callback) {
   //Todo(Prakash): Identify which transport from the pool to pick.
   TransportPtr transport;//(GetTransportFromPool());
-  Endpoint endpoint;//(SendManagedConnectionReq(trnasport, peer));
+  rpcs_->CreateConnection(transport, peer, ref_id_,
+      std::bind(&ManagedConnectionMap::ManagedConnectionReqCallback, this,
+                arg::_1, arg::_2, arg::_3, transport, callback));
+}
 
-  if (endpoint.ip == IP())
-    return -1; // Error code reqd
-  ConnectionPtr connection;//(SendManagedEndpointReq(endpoint));
-  if (connection != ConnectionPtr())
-    return InsertConnection(connection, peer, reference_id,
-                            GenerateConnectionID());
-  else {
-    return -2; // Error code reqd
-  }
+void ManagedConnectionMap::ManagedConnectionReqCallback(
+      const uint32_t &transport_condition, const Endpoint &endpoint,
+      const std::string &reference_id, TransportPtr transport,
+      CreateConnectionCallback callback) {
+   if (endpoint.ip == IP())
+     callback(-1);
+    ConnectionPtr connection(transport->GetConnection(endpoint));
+    if (connection != ConnectionPtr()) {
+      connection->SetManaged(true);
+      InsertConnection(connection, endpoint, reference_id,
+                       GenerateConnectionID());
+      transport->RemoveConnection(connection);
+      callback(0);
+    }
+    else {
+      callback(-2);
+    }
 }
 
 boost::int32_t ManagedConnectionMap::InsertConnection(

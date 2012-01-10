@@ -27,7 +27,6 @@ message ManagedConnectionInfoRequest {
 
 message ManagedConnectionInfoResponse {
    optional Endpoint endpoint = 1;
-   optional bytes identifier = 2;
 }
 
 message ManagedConnectionRequest {
@@ -36,6 +35,7 @@ message ManagedConnectionRequest {
 
 message ManagedConnectionResponse {
   required int32 result = 1;
+   optional bytes identifier = 2;
 }
 
 message NatDetectionRequest {

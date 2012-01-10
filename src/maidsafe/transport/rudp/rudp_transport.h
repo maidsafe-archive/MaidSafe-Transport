@@ -37,6 +37,7 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "boost/asio/io_service.hpp"
 #include "boost/asio/strand.hpp"
 #include "maidsafe/transport/transport.h"
+#include "maidsafe/transport/rudp/rudp_connection.h"
 
 #include "maidsafe/transport/rudp/rudp_parameters.h"
 
@@ -45,9 +46,10 @@ namespace maidsafe {
 namespace transport {
 
 class RudpAcceptor;
-class RudpConnection;
+//class RudpConnection;
 class RudpMultiplexer;
 class RudpSocket;
+class ManagedConnectionMap;
 
 class RudpTransport : public Transport,
                       public std::enable_shared_from_this<RudpTransport> {
@@ -77,6 +79,9 @@ class RudpTransport : public Transport,
   typedef std::shared_ptr<RudpAcceptor> AcceptorPtr;
   typedef std::shared_ptr<RudpConnection> ConnectionPtr;
   typedef std::set<ConnectionPtr> ConnectionSet;
+
+  friend class ManagedConnectionMap;
+  ConnectionPtr GetConnection(const Endpoint &endpoint);
 
   static void CloseAcceptor(AcceptorPtr acceptor);
   static void CloseMultiplexer(MultiplexerPtr multiplexer);
@@ -109,6 +114,8 @@ class RudpTransport : public Transport,
   // a shared_ptr in this map, as well as in the async operation handlers.
   ConnectionSet connections_;
 };
+
+typedef std::shared_ptr<RudpTransport> TransportPtr;
 
 }  // namespace transport
 
