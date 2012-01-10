@@ -62,6 +62,10 @@ namespace transport {
 
 enum MessageType {
   kManagedEndpointMessage = 1,
+  kManagedConnectionInfoRequest,
+  kManagedConnectionInfoResponse,
+  kManagedConnectionRequest,
+  kManagedConnectionResponse,
   kNatDetectionRequest,
   kNatDetectionResponse,
   kProxyConnectRequest,
@@ -76,6 +80,10 @@ namespace protobuf {
 class Endpoint;
 class WrapperMessage;
 class ManagedEndpointMessage;
+class ManagedConnectionInfoRequest;
+class ManagedConnectionInfoResponse;
+class ManagedConnectionRequest;
+class ManagedConnectionResponse;
 class NatDetectionRequest;
 class NatDetectionResponse;
 class ProxyConnectRequest;
@@ -103,6 +111,24 @@ class MessageHandler {
       bs2::signal<void(const protobuf::ManagedEndpointMessage&,
                        protobuf::ManagedEndpointMessage*,
                        transport::Timeout*)>> ManagedEndpointMsgSigPtr;
+  typedef std::shared_ptr<bs2::signal<
+      void(const transport::Info&,
+           const protobuf::ManagedConnectionInfoRequest&,
+           protobuf::ManagedConnectionInfoResponse*,
+           transport::Timeout*)>> ManagedConnectionInfoReqSigPtr;
+  typedef std::shared_ptr<bs2::signal<
+      void(const transport::Info&,
+           const protobuf::ManagedConnectionInfoResponse&)>>
+               ManagedConnectionInfoRspSigPtr;
+  typedef std::shared_ptr<bs2::signal<
+      void(const transport::Info&,
+           const protobuf::ManagedConnectionRequest&,
+           protobuf::ManagedConnectionResponse*,
+           transport::Timeout*)>> ManagedConnectionReqSigPtr;
+  typedef std::shared_ptr<bs2::signal<
+      void(const transport::Info&,
+           const protobuf::ManagedConnectionResponse&,
+           transport::Timeout*)>> ManagedConnectionRspSigPtr;
   typedef std::shared_ptr<
       bs2::signal<void(const protobuf::NatDetectionRequest&,
                        protobuf::NatDetectionResponse*,
@@ -137,6 +163,10 @@ class MessageHandler {
   explicit MessageHandler(PrivateKeyPtr private_key)
     : private_key_(private_key),
       on_managed_endpoint_message_(new ManagedEndpointMsgSigPtr::element_type),
+      on_managed_connection_info_request_(new ManagedConnectionInfoReqSigPtr::element_type),  //NOLINT
+      on_managed_connection_info_response_(new ManagedConnectionInfoRspSigPtr::element_type),  //NOLINT
+      on_managed_connection_request_(new ManagedConnectionReqSigPtr::element_type),  //NOLINT
+      on_managed_connection_response_(new ManagedConnectionRspSigPtr::element_type),  //NOLINT
       on_nat_detection_request_(new NatDetectionReqSigPtr::element_type),
       on_nat_detection_response_(new NatDetectionRspSigPtr::element_type),
       on_proxy_connect_request_(new ProxyConnectReqSigPtr::element_type),
@@ -158,6 +188,10 @@ class MessageHandler {
                const Endpoint &remote_endpoint);
 
   std::string WrapMessage(const protobuf::ManagedEndpointMessage &msg);
+  std::string WrapMessage(const protobuf::ManagedConnectionInfoRequest &msg);
+  std::string WrapMessage(const protobuf::ManagedConnectionInfoResponse &msg);
+  std::string WrapMessage(const protobuf::ManagedConnectionRequest &msg);
+  std::string WrapMessage(const protobuf::ManagedConnectionResponse &msg);
   std::string WrapMessage(const protobuf::NatDetectionRequest &msg);
   std::string WrapMessage(const protobuf::ProxyConnectRequest &msg);
   std::string WrapMessage(const protobuf::ForwardRendezvousRequest &msg);
@@ -165,6 +199,18 @@ class MessageHandler {
 
   ManagedEndpointMsgSigPtr on_managed_endpoint_message() {
     return on_managed_endpoint_message_;
+  }
+  ManagedConnectionInfoReqSigPtr on_managed_connection_info_request() {
+    return on_managed_connection_info_request_;
+  }
+  ManagedConnectionInfoRspSigPtr on_managed_connection_info_response() {
+    return on_managed_connection_info_response_;
+  }
+  ManagedConnectionReqSigPtr on_managed_connection_request() {
+    return on_managed_connection_request_;
+  }
+  ManagedConnectionRspSigPtr on_managed_connection_response() {
+    return on_managed_connection_response_;
   }
   NatDetectionReqSigPtr on_nat_detection_request() {
     return on_nat_detection_request_;
@@ -223,6 +269,10 @@ class MessageHandler {
   std::string WrapMessage(const protobuf::RendezvousAcknowledgement &msg);
 
   ManagedEndpointMsgSigPtr on_managed_endpoint_message_;
+  ManagedConnectionInfoReqSigPtr on_managed_connection_info_request_;
+  ManagedConnectionInfoRspSigPtr on_managed_connection_info_response_;
+  ManagedConnectionReqSigPtr on_managed_connection_request_;
+  ManagedConnectionRspSigPtr on_managed_connection_response_;
   NatDetectionReqSigPtr on_nat_detection_request_;
   NatDetectionRspSigPtr on_nat_detection_response_;
   ProxyConnectReqSigPtr on_proxy_connect_request_;

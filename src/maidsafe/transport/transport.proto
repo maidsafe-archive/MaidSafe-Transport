@@ -21,6 +21,23 @@ message ManagedEndpointMessage {
   optional int32 retry_frequency = 7;
 }
 
+message ManagedConnectionInfoRequest {
+  optional bytes identifier = 1;
+}
+
+message ManagedConnectionInfoResponse {
+   optional Endpoint endpoint = 1;
+   optional bytes identifier = 2;
+}
+
+message ManagedConnectionRequest {
+  required bytes identifier = 1;
+}
+
+message ManagedConnectionResponse {
+  required int32 result = 1;
+}
+
 message NatDetectionRequest {
   repeated bytes local_ips = 1;
   required int32 local_port = 2;

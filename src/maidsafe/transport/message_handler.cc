@@ -92,6 +92,41 @@ std::string MessageHandler::WrapMessage(
 }
 
 std::string MessageHandler::WrapMessage(
+    const protobuf::ManagedConnectionInfoRequest &msg) {
+  if (!msg.IsInitialized())
+    return "";
+  return MakeSerialisedWrapperMessage(kManagedConnectionInfoRequest,
+                                      msg.SerializeAsString(), kNone,
+                                      Asym::PublicKey());
+}
+
+std::string MessageHandler::WrapMessage(
+    const protobuf::ManagedConnectionInfoResponse &msg) {
+  if (!msg.IsInitialized())
+    return "";
+  return MakeSerialisedWrapperMessage(kManagedConnectionInfoResponse,
+                                      msg.SerializeAsString(), kNone,
+                                      Asym::PublicKey());
+}
+
+std::string MessageHandler::WrapMessage(
+    const protobuf::ManagedConnectionRequest &msg) {
+  if (!msg.IsInitialized())
+    return "";
+  return MakeSerialisedWrapperMessage(kManagedConnectionRequest,
+                                      msg.SerializeAsString(), kNone,
+                                      Asym::PublicKey());
+}
+
+std::string MessageHandler::WrapMessage(
+    const protobuf::ManagedConnectionResponse &msg) {
+  if (!msg.IsInitialized())
+    return "";
+  return MakeSerialisedWrapperMessage(kManagedConnectionResponse,
+                                      msg.SerializeAsString(), kNone,
+                                      Asym::PublicKey());
+}
+std::string MessageHandler::WrapMessage(
     const protobuf::NatDetectionRequest &msg) {
   if (!msg.IsInitialized())
     return "";
@@ -168,7 +203,7 @@ void MessageHandler::ProcessSerialisedMessage(
     const std::string &payload,
     const SecurityType &/*security_type*/,
     const std::string &/*message_signature*/,
-    const Info &/*info*/,
+    const Info &info,
     std::string *message_response,
     Timeout *timeout) {
   message_response->clear();
@@ -181,6 +216,40 @@ void MessageHandler::ProcessSerialisedMessage(
         protobuf::ManagedEndpointMessage response;
         (*on_managed_endpoint_message_)(request, &response, timeout);
         *message_response = WrapMessage(response);
+      }
+      break;
+    }
+    case kManagedConnectionInfoRequest: {
+      protobuf::ManagedConnectionInfoRequest request;
+      if (request.ParseFromString(payload) && request.IsInitialized()) {
+        protobuf::ManagedConnectionInfoResponse response;
+        (*on_managed_connection_info_request_)(info, request, &response,
+             timeout);
+        *message_response = WrapMessage(response);
+      }
+      break;
+    }
+    case kManagedConnectionInfoResponse: {
+      protobuf::ManagedConnectionInfoResponse response;
+      if (response.ParseFromString(payload) && response.IsInitialized()) {
+        (*on_managed_connection_info_response_)(info, response);
+      }
+      break;
+    }
+    case kManagedConnectionRequest: {
+      protobuf::ManagedConnectionRequest request;
+      if (request.ParseFromString(payload) && request.IsInitialized()) {
+        protobuf::ManagedConnectionResponse response;
+        (*on_managed_connection_request_)(info, request, &response,
+             timeout);
+        *message_response = WrapMessage(response);
+      }
+      break;
+    }
+    case kManagedConnectionResponse: {
+      protobuf::ManagedConnectionResponse response;
+      if (response.ParseFromString(payload) && response.IsInitialized()) {
+        (*on_managed_connection_response_)(info, response, timeout);
       }
       break;
     }
