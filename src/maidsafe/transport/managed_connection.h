@@ -40,7 +40,6 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "maidsafe/common/utils.h"
 
-//  #include "maidsafe/dht/kademlia/config.h"
 #include "maidsafe/transport/transport.h"
 #include "maidsafe/transport/managed_connection_rpc.h"
 
@@ -48,16 +47,20 @@ namespace maidsafe  {
 
 namespace transport {
 
+class RudpTransport;
 class RudpConnection;
+class TransportPool;
 
-//typedef std::shared_ptr<Transport> TransportPtr;
-typedef std::shared_ptr<RudpConnection> ConnectionPtr;
+typedef std::shared_ptr<TransportPool> TransportPoolPtr;
+typedef std::shared_ptr<RudpTransport> RudpTransportPtr;
+typedef std::shared_ptr<RudpConnection> RudpConnectionPtr;
+typedef std::function<void(const int&)> CreateConnectionFunctor;
 
 // Maximum number of bytes to read at a time
 const int kNumOfEnquiryGroup = 5;
 
 struct ManagedConnection {
-  ManagedConnection(const ConnectionPtr connection,
+  ManagedConnection(RudpConnectionPtr connection,
                     const Endpoint &new_peer,
                     const std::string &peer_id,
                     const std::string &referenceid,
@@ -67,18 +70,7 @@ struct ManagedConnection {
         is_connected(true),
         enquiry_group(RandomUint32() % kNumOfEnquiryGroup) {}
 
-  //ManagedConnection(const ConnectionPtr connection,
-  //                  const Endpoint &new_peer,
-  //                  const std::string &peer_id,
-  //                  const std::string &referenceid,
-  //                  const boost::uint32_t &connection_id,
-  //                  const bool client_mode)
-  //    : connection_ptr(connection), peer(new_peer), peerid(peer_id),
-  //      reference_id(referenceid), connectionid(connection_id),
-  //      is_connected(true), is_client(client_mode),
-  //      enquiry_group(RandomUint32() % kNumOfEnquiryGroup) {}
-
-  ConnectionPtr connection_ptr;
+  RudpConnectionPtr connection_ptr;
   Endpoint peer;
   std::string peerid;
   std::string reference_id;
@@ -129,12 +121,10 @@ typedef boost::multi_index::multi_index_container<
 
 enum MonitoringMode { kPassive, kActive };
 
-typedef std::shared_ptr<boost::signals2::signal<void(const std::string&)>>
-    NotifyDownPtr;
-typedef std::shared_ptr<boost::signals2::signal<void(const boost::uint32_t&)>>
-    NotifyDownByConnectionIdPtr;
-
-typedef std::function<void(const uint32_t&)> CreateConnectionCallback;
+typedef std::shared_ptr<boost::signals2::signal<void(const TransportCondition &,
+      const std::string&)>> NotifyDownPtr;
+typedef std::shared_ptr<boost::signals2::signal<void(const TransportCondition &,
+      const boost::uint32_t&)>> NotifyDownByConnectionIdPtr;
 
 // This class holds the managed connections, monitoring the connection status
 // Two monitoring methods provided:
@@ -150,7 +140,8 @@ typedef std::function<void(const uint32_t&)> CreateConnectionCallback;
 class ManagedConnectionMap  {
  public:
   ManagedConnectionMap(boost::asio::io_service &io_service,
-                       const std::string &ref_id);
+                       const std::string &ref_id,
+                       TransportPoolPtr transport_pool);
 
   ~ManagedConnectionMap();
 
@@ -160,13 +151,12 @@ class ManagedConnectionMap  {
 //  void SetReservedPort(const boost::uint32_t &port);
 
   // Check if the specified port has already be occupied
-  bool HasPort(const boost::uint32_t &index);
+  bool HasConnectionId(const boost::uint32_t &index);
 
   // Creates a managed connection into the multi index container
   // The connection_id will be returned
 
-  boost::int32_t CreateConnection(const Endpoint &peer,
-                                  CreateConnectionCallback callback);
+  void CreateConnection(const Endpoint &peer, CreateConnectionFunctor callback);
   boost::int32_t InsertIncomingConnection(const Endpoint &peer,
                                           const std::string &reference_id);
 
@@ -217,25 +207,27 @@ class ManagedConnectionMap  {
 
   /** Return next available port */
 //  boost::uint16_t NextEmptyPort() { return GenerateConnectionID(); }
+  OnMessageReceived on_message_received(const std::string &reference_id);
+  OnError on_error(const std::string &reference_id);
 
  private:
   // Adds a managed connection into the multi index container
   // The connection_id will be returned
-  boost::int32_t InsertConnection(const ConnectionPtr connection,
+  boost::int32_t InsertConnection(const RudpConnectionPtr connection,
                                   const std::string &reference_id);
-  boost::int32_t InsertConnection(const ConnectionPtr connection,
+  boost::int32_t InsertConnection(const RudpConnectionPtr connection,
                                   const Endpoint &peer,
                                   const std::string &reference_id,
-                                  const boost::uint16_t &port);
+                                  const boost::uint32_t &connection_id);
   //boost::int32_t InsertConnection(const ConnectionPtr connection,
   //                                const Endpoint &peer,
   //                                const std::string &reference_id,
   //                                const boost::uint16_t &port);
 
   // Return the ConnectionPtr of the node
-  ConnectionPtr GetConnectionByPeerId(const std::string &peer_id);
-  ConnectionPtr GetConnection(const boost::uint32_t &connection_id);
-  ConnectionPtr GetConnection(const std::string &reference_id);
+  RudpConnectionPtr GetConnectionByPeerId(const std::string &peer_id);
+  RudpConnectionPtr GetConnection(const boost::uint32_t &connection_id);
+  RudpConnectionPtr GetConnection(const std::string &reference_id);
 
    /** Generate next unique empty connection ID */
   boost::uint16_t GenerateConnectionID();
@@ -246,12 +238,11 @@ class ManagedConnectionMap  {
   /** Check if the input reference_id already contained in the multi-index */
   bool HasReferenceId(const std::string &reference_id);
 
-  void SendManagedConnectionReq(TransportPtr transport,
-                                    const Endpoint &peer);
+  std::string ToString(const Endpoint &ep);
   void ManagedConnectionReqCallback(
       const uint32_t &transport_condition, const Endpoint &endpoint,
       const std::string& reference_id, TransportPtr transport,
-      CreateConnectionCallback callback);
+      CreateConnectionFunctor callback);
   /** Handle connection error, mark corresponding connection to be DOWN */
   void DoOnConnectionError(const TransportCondition &error,
                            const Endpoint peer);
@@ -260,9 +251,11 @@ class ManagedConnectionMap  {
   void AliveEnquiryThread();
   void EnquiryThread();
 
+  boost::asio::io_service &asio_service_;
   std::string ref_id_;
   /** Multi_index container of managed connections */
   std::shared_ptr<ManagedConnectionContainer> connections_container_;
+  TransportPoolPtr transport_pool_;
   /** Signal to be fired when there is one dropped connection detected */
   NotifyDownPtr notify_down_by_peer_id_;
   NotifyDownPtr notify_down_by_ref_id_;
@@ -290,7 +283,6 @@ class ManagedConnectionMap  {
   typedef boost::upgrade_to_unique_lock<boost::shared_mutex>
       UpgradeToUniqueLock;
 
-  boost::asio::io_service &asio_service_;
   std::shared_ptr<ManagedConnectionRpcs> rpcs_;
 };
 

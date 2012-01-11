@@ -39,8 +39,8 @@ namespace transport {
 // class MessageHandlerPtr;
 // class TransportPtr;
 
-typedef std::function<void(const uint32_t&,
-            const Endpoint&, const std::string&)> CreateConnectionRpc;
+typedef std::function<void(const int32_t&, const Endpoint&, const std::string&)>
+    CreateConnectionRpc;
   
 class ManagedConnectionRpcs {
  public:
@@ -50,12 +50,14 @@ class ManagedConnectionRpcs {
                         const std::string &ref_id,
                         CreateConnectionRpc callback);
   void ManagedConnectionInfoCallback(const TransportCondition &condition,
-      const transport::Info &info,                                     
+      const transport::Info &info,
+      const Endpoint &remote_endpoint,
       const protobuf::ManagedConnectionInfoResponse &response,
       const std::string &ref_id, CreateConnectionRpc callback,
       const size_t &index,  const Endpoint &endpoint);
   void CreateConnectionCallback(const TransportCondition& condition,
       const transport::Info &info,
+      const Endpoint &remote_endpoint,
       const protobuf::ManagedConnectionResponse &response,
       const Endpoint &endpoint, CreateConnectionRpc callback,
       const size_t &index);

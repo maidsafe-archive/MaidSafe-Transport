@@ -136,6 +136,15 @@ struct Endpoint {
   Port port;
 };
 
+// Compare two endpoints for equality.
+inline bool operator==(const Endpoint& ep1, const Endpoint& ep2) {
+  return ((ep1.ip == ep2.ip) && (ep1.port == ep2.port));
+}
+// Compare two endpoints for inequality.
+inline bool operator!=(const Endpoint& ep1, const Endpoint& ep2) {
+  return !(ep1 == ep2);
+}
+
 struct Info {
   Info() : endpoint(), rtt(0) {}
   virtual ~Info() {}

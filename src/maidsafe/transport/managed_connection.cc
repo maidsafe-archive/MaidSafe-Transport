@@ -26,8 +26,10 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 #include "maidsafe/transport/managed_connection.h"
+
 #include "maidsafe/transport/rudp/rudp_connection.h"
-#include "maidsafe/transport/transport.pb.h"
+#include "maidsafe/transport/rudp/rudp_transport.h"
+#include "maidsafe/transport/transport_pool.h"
 
 namespace arg = std::placeholders;
 
@@ -35,11 +37,14 @@ namespace maidsafe {
 
 namespace transport {
 
-ManagedConnectionMap::ManagedConnectionMap(
-    boost::asio::io_service &io_service,
-    const std::string &ref_id)
-    : ref_id_(ref_id),
+
+ManagedConnectionMap::ManagedConnectionMap(boost::asio::io_service &io_service,
+                                           const std::string &ref_id,
+                                           TransportPoolPtr transport_pool)
+    : asio_service_(io_service),
+      ref_id_(ref_id),
       connections_container_(new ManagedConnectionContainer),
+      transport_pool_(transport_pool),
       notify_down_by_peer_id_(),
       notify_down_by_ref_id_(),
       notify_down_by_connection_id_(),
@@ -50,7 +55,6 @@ ManagedConnectionMap::ManagedConnectionMap(
       condition_enquiry_(),
       thread_group_(),
       enquiry_index(0),
-      asio_service_(io_service),
       rpcs_(new ManagedConnectionRpcs()) {}
 
 ManagedConnectionMap::~ManagedConnectionMap() {
@@ -63,21 +67,14 @@ ManagedConnectionMap::~ManagedConnectionMap() {
   }
 }
 
-//void ManagedConnectionMap::SetReservedPort(const uint32_t& port) {
-//  if (!HasPort(port)) {
-//    // insert an empty transport to make the port reserved
-//    UniqueLock unique_lock(shared_mutex_);
-//    ManagedConnectionContainer::index<TagConnectionId>::type&
-//        index_by_connection_id = connections_container_->get<TagConnectionId>();
-//    ManagedConnection mc(ConnectionPtr(), Endpoint(), "", "", port);
-//    index_by_connection_id.insert(mc);
-//  }
-//}
-
-boost::int32_t ManagedConnectionMap::CreateConnection(const Endpoint &peer,
-    CreateConnectionCallback callback) {
-  //Todo(Prakash): Identify which transport from the pool to pick.
-  TransportPtr transport;//(GetTransportFromPool());
+void ManagedConnectionMap::CreateConnection(const Endpoint &peer,
+    CreateConnectionFunctor callback) {
+  std::string peer_id(ToString(peer));
+  if(IsConnectedByPeerId(peer_id)) {
+    callback(-5); //TODO(Prakash): Define error codes for Already connected
+    return;
+  }
+  RudpTransportPtr transport(transport_pool_->GetAvailableTransport());
   rpcs_->CreateConnection(transport, peer, ref_id_,
       std::bind(&ManagedConnectionMap::ManagedConnectionReqCallback, this,
                 arg::_1, arg::_2, arg::_3, transport, callback));
@@ -86,72 +83,70 @@ boost::int32_t ManagedConnectionMap::CreateConnection(const Endpoint &peer,
 void ManagedConnectionMap::ManagedConnectionReqCallback(
       const uint32_t &transport_condition, const Endpoint &endpoint,
       const std::string &reference_id, TransportPtr transport,
-      CreateConnectionCallback callback) {
+      CreateConnectionFunctor callback) {
    if (endpoint.ip == IP())
-     callback(-1);
-    ConnectionPtr connection(transport->GetConnection(endpoint));
-    if (connection != ConnectionPtr()) {
-      connection->SetManaged(true);
-      InsertConnection(connection, endpoint, reference_id,
-                       GenerateConnectionID());
-      transport->RemoveConnection(connection);
-      callback(0);
-    }
-    else {
-      callback(-2);
-    }
+     callback(-1);  //TODO(Prakash): Define error codes
+   ConnectionPtr connection(transport->GetConnection(endpoint));
+   if (connection != ConnectionPtr()) {
+     connection->SetManaged(true);
+     InsertConnection(connection, endpoint, reference_id,
+                      GenerateConnectionID());
+     transport->RemoveConnection(connection);
+     callback(kSuccess);
+   } else {
+     callback(-2);
+   }
 }
 
-boost::int32_t ManagedConnectionMap::InsertConnection(
-    const ConnectionPtr connection,
+boost::int32_t ManagedConnectionMap::InsertIncomingConnection(
+    const Endpoint &peer,
     const std::string &reference_id) {
-  //if (transport->transport_type() != kRUDP)
-  //  return kError;
-  IP localIP(boost::asio::ip::address_v4::loopback());
-  boost::uint16_t peer_port = static_cast<uint16_t>(GenerateConnectionID());
-  Endpoint peer(localIP, peer_port);
-  std::stringstream out;
-  out << peer_port;
-  std::string peer_id = peer.ip.to_string() + ":" + out.str();
-
-  UniqueLock unique_lock(shared_mutex_);
-  ManagedConnectionContainer::index<TagConnectionId>::type&
-      index_by_connection_id = connections_container_->get<TagConnectionId>();
-
-  // For managed connections, the error handling shall be always in the charge
-  // of ManagedConnectionMap
-  //Todo(Prakash) : connecting signal should go where we wre initialising transport in the pool
-  //transport->on_error()->connect(transport::OnError::element_type::slot_type(
-  //    &ManagedConnectionMap::DoOnConnectionError, this, _1, _2));
-  ManagedConnection mc(connection, peer, peer_id, reference_id, peer_port);
-  index_by_connection_id.insert(mc);
-  return mc.connectionid;
+  ConnectionPtr connection(transport_pool_->GetConnection(peer));
+  if(connection && peer != Endpoint() && reference_id.empty())
+    return InsertConnection(connection, peer, reference_id,
+                            GenerateConnectionID());
+  else
+    return -1;
 }
 
 //boost::int32_t ManagedConnectionMap::InsertConnection(
-//    const ConnectionPtr connection,
-//    const Endpoint &peer,
-//    const std::string &reference_id,
-//    const boost::uint16_t port) {
-//  return InsertConnection(connection, peer, reference_id, port);
+//    const RudpConnectionPtr connection,
+//    const std::string &reference_id) {
+//  //if (transport->transport_type() != kRUDP)
+//  //  return kError;
+//  IP localIP(boost::asio::ip::address_v4::loopback());
+//  boost::uint16_t peer_port = static_cast<uint16_t>(GenerateConnectionID());
+//  Endpoint peer(localIP, peer_port);
+//  std::stringstream out;
+//  out << peer_port;
+//  std::string peer_id = peer.ip.to_string() + ":" + out.str();
+//
+//  UniqueLock unique_lock(shared_mutex_);
+//  ManagedConnectionContainer::index<TagConnectionId>::type&
+//      index_by_connection_id = connections_container_->get<TagConnectionId>();
+//
+//  // For managed connections, the error handling shall be always in the charge
+//  // of ManagedConnectionMap
+//  //Todo(Prakash) : connecting signal should go where we wre initialising transport in the pool
+//  //transport->on_error()->connect(transport::OnError::element_type::slot_type(
+//  //    &ManagedConnectionMap::DoOnConnectionError, this, _1, _2));
+//  ManagedConnection mc(connection, peer, peer_id, reference_id, peer_port);
+//  index_by_connection_id.insert(mc);
+//  return mc.connectionid;
 //}
 
 boost::int32_t ManagedConnectionMap::InsertConnection(
-    const ConnectionPtr connection,
+    const RudpConnectionPtr connection,
     const Endpoint &peer,
     const std::string &reference_id,
-    const boost::uint16_t &port) {
+    const boost::uint32_t &connection_id) {
   //if (transport->transport_type() != kRUDP)
   //  return -1;
-
-  boost::uint32_t peer_port = peer.port;
-  std::stringstream out;
-  out << peer_port;
-  std::string peer_id = peer.ip.to_string() + ":" + out.str();
-  if (peer_id != "")
+  std::string peer_id(ToString(peer));
+  if (peer_id.empty())
     return -1;
-  if ((HasPeerId(peer_id)) || (HasPort(port)))
-    return -3; // Error code indicating peerid or port exists
+  if ((HasPeerId(peer_id)) || (HasConnectionId(connection_id)))
+    return -3; // Error code indicating peerid or connection_id exists
 
   UniqueLock unique_lock(shared_mutex_);
   ManagedConnectionContainer::index<TagConnectionId>::type&
@@ -159,16 +154,47 @@ boost::int32_t ManagedConnectionMap::InsertConnection(
 
   // For managed connections, the error handling shall be always handled by the
   // ManagedConnectionMap
-  //Todo(Prakash) : connecting signal should go where we wre initialising transport in the pool
-  //transport->on_error()->connect(transport::OnError::element_type::slot_type(
-  //    &ManagedConnectionMap::DoOnConnectionError, this, _1, _2));
-  ManagedConnection mc(connection, peer, peer_id, reference_id, port);
+  ManagedConnection mc(connection, peer, peer_id, reference_id, connection_id);
   index_by_connection_id.insert(mc);
   return mc.connectionid;
 }
 
+OnMessageReceived ManagedConnectionMap::on_message_received(
+    const std::string &reference_id){
+  if (reference_id.empty())
+    return OnMessageReceived();
+  {
+    SharedLock shared_lock(shared_mutex_);
+    ManagedConnectionContainer::index<TagReferenceId>::type&
+        index_by_reference_id = connections_container_->get<TagReferenceId>();
+    auto it = index_by_reference_id.find(reference_id);
+    if (it != index_by_reference_id.end()) {
+      if (RudpTransportPtr transport = ((*it).connection_ptr->transport_.lock()))
+        return transport->on_message_received();
+    }
+    return OnMessageReceived();
+  }
+}
+
+OnError ManagedConnectionMap::on_error(const std::string &reference_id){
+  if (reference_id.empty())
+    return OnError();
+  {
+    SharedLock shared_lock(shared_mutex_);
+    ManagedConnectionContainer::index<TagReferenceId>::type&
+        index_by_reference_id = connections_container_->get<TagReferenceId>();
+    auto it = index_by_reference_id.find(reference_id);
+    if (it != index_by_reference_id.end()) {
+      if (RudpTransportPtr transport =
+          ((*it).connection_ptr->transport_.lock()))
+        return transport->on_error();
+    }
+    return OnError();
+  }
+}
+
 void ManagedConnectionMap::DoOnConnectionError(
-    const TransportCondition &/*error*/, const Endpoint peer) {
+    const TransportCondition &error, const Endpoint peer) {
   UpgradeLock upgrade_lock(shared_mutex_);
   std::stringstream out;
   out << peer.port;
@@ -180,7 +206,8 @@ void ManagedConnectionMap::DoOnConnectionError(
     UpgradeToUniqueLock upgrade_unique_lock(upgrade_lock);
     index_by_peer_id.modify(it, ChangeConnectionStatus(false));
   }
-
+  (*notify_down_by_ref_id_)(error, (*it).reference_id);
+  (*notify_down_by_peer_id_)(error, peer_id);
 }
 
 boost::uint16_t ManagedConnectionMap::GenerateConnectionID() {
@@ -221,7 +248,7 @@ bool ManagedConnectionMap::HasReferenceId(const std::string& reference_id) {
   return true;
 }
 
-bool ManagedConnectionMap::HasPort(const boost::uint32_t &index) {
+bool ManagedConnectionMap::HasConnectionId(const boost::uint32_t &index) {
   if (index < 1501)
     return true;
   SharedLock shared_lock(shared_mutex_);
@@ -278,41 +305,48 @@ bool ManagedConnectionMap::RemoveConnection(const std::string &reference_id) {
   return true;
 }
 
-ConnectionPtr ManagedConnectionMap::GetConnectionByPeerId(
+RudpConnectionPtr ManagedConnectionMap::GetConnectionByPeerId(
     const std::string &peer_id) {
   if (peer_id.empty())
-    return ConnectionPtr();
+    return RudpConnectionPtr();
   SharedLock shared_lock(shared_mutex_);
   ManagedConnectionContainer::index<TagConnectionPeerId>::type&
       index_by_peer_id = connections_container_->get<TagConnectionPeerId>();
   auto it = index_by_peer_id.find(peer_id);
   if (it == index_by_peer_id.end())
-    return ConnectionPtr();
+    return RudpConnectionPtr();
   return (*it).connection_ptr;
 }
 
-ConnectionPtr ManagedConnectionMap::GetConnection(
+RudpConnectionPtr ManagedConnectionMap::GetConnection(
     const std::string &reference_id) {
   if (reference_id.empty())
-    return ConnectionPtr();
+    return RudpConnectionPtr();
   SharedLock shared_lock(shared_mutex_);
   ManagedConnectionContainer::index<TagReferenceId>::type&
       index_by_reference_id = connections_container_->get<TagReferenceId>();
   auto it = index_by_reference_id.find(reference_id);
   if (it == index_by_reference_id.end())
-    return ConnectionPtr();
+    return RudpConnectionPtr();
   return (*it).connection_ptr;
 }
 
-ConnectionPtr ManagedConnectionMap::GetConnection(
+RudpConnectionPtr ManagedConnectionMap::GetConnection(
     const boost::uint32_t &connection_id) {
   SharedLock shared_lock(shared_mutex_);
   ManagedConnectionContainer::index<TagConnectionId>::type&
       index_by_connection_id = connections_container_->get<TagConnectionId>();
   auto it = index_by_connection_id.find(connection_id);
   if (it == index_by_connection_id.end())
-    return ConnectionPtr();
+    return RudpConnectionPtr();
   return (*it).connection_ptr;
+}
+
+std::string ManagedConnectionMap::ToString(const Endpoint &ep){
+  std::stringstream out;
+  out << ep.port;
+  std::string peer_id = ep.ip.to_string() + ":" + out.str();
+  return peer_id;
 }
 
 bool ManagedConnectionMap::IsConnectedByPeerId(const std::string &peer_id) {
@@ -347,6 +381,52 @@ bool ManagedConnectionMap::IsConnected(const boost::uint32_t &connection_id) {
   if (it == index_by_connection_id.end())
     return false;
   return (*it).is_connected;
+}
+
+bool ManagedConnectionMap::Send(const std::string &data,
+                                const Endpoint &endpoint,
+                                const Timeout &timeout) {
+  std::string peer_id(ToString(endpoint));
+  if (peer_id.empty())
+    return false;
+  {
+    SharedLock shared_lock(shared_mutex_);
+    ManagedConnectionContainer::index<TagConnectionPeerId>::type&
+        index_by_peer_id = connections_container_->get<TagConnectionPeerId>();
+    auto it = index_by_peer_id.find(peer_id);
+    if (it == index_by_peer_id.end())
+      return false;
+    if (std::shared_ptr<RudpTransport> transport =
+        (*it).connection_ptr->transport_.lock()) {
+      transport->Send(data, (*it).connection_ptr, timeout);
+      return true;
+    } else {
+      return false;
+    }
+  }
+}
+
+bool ManagedConnectionMap::Send(const std::string &data,
+                                const boost::uint32_t &connection_id,
+                                const Timeout &timeout) {
+  if (connection_id == 0)
+    return false;
+  {
+    SharedLock shared_lock(shared_mutex_);
+    ManagedConnectionContainer::index<TagConnectionId>::type&
+        index_by_connection_id =
+            connections_container_->get<TagConnectionId>();
+    auto it = index_by_connection_id.find(connection_id);
+    if (it == index_by_connection_id.end())
+      return false;
+    if (std::shared_ptr<RudpTransport> transport =
+        (*it).connection_ptr->transport_.lock()) {
+      transport->Send(data, (*it).connection_ptr, timeout);
+      return true;
+    } else {
+      return false;
+    }
+  }
 }
 
 void ManagedConnectionMap::AliveEnquiryThread() {

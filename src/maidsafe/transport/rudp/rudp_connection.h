@@ -71,6 +71,7 @@ class RudpConnection : public std::enable_shared_from_this<RudpConnection> {
   void StartSending(const std::string &data, const Timeout &timeout);
 
  private:
+friend ManagedConnectionMap;
   RudpConnection(const RudpConnection&);
   RudpConnection &operator=(const RudpConnection&);
 
@@ -103,7 +104,6 @@ class RudpConnection : public std::enable_shared_from_this<RudpConnection> {
   void EncodeData(const std::string &data);
   void CloseOnError(const TransportCondition &error);
 
-  friend class ManagedConnectionMap;
   void SetManaged(bool managed);
 
   std::weak_ptr<RudpTransport> transport_;

@@ -95,6 +95,15 @@ class RudpTransport : public Transport,
                     ConnectionPtr connection,
                     const boost::system::error_code &ec);
 
+  // This call assumes that multiplexer is open. or it does nothing.
+  void Send(const std::string &data,
+            ConnectionPtr connection,
+            const Timeout &timeout);
+
+  void DoSend(const std::string &data,
+              const Timeout &timeout,
+              ConnectionPtr connection);
+
   void DoSend(const std::string &data,
               const Endpoint &endpoint,
               const Timeout &timeout);

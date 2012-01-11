@@ -147,9 +147,10 @@ void RudpTransport::HandleAccept(AcceptorPtr acceptor,
 void RudpTransport::Send(const std::string &data,
                          const Endpoint &endpoint,
                          const Timeout &timeout) {
-  strand_.dispatch(std::bind(&RudpTransport::DoSend,
-                             shared_from_this(),
-                             data, endpoint, timeout));
+  strand_.dispatch(std::bind(static_cast<void (RudpTransport::*)
+      (const std::string&, const Endpoint&, const Timeout&)>
+          (&RudpTransport::DoSend), shared_from_this(),
+              data, endpoint, timeout));
 }
 
 void RudpTransport::DoSend(const std::string &data,
@@ -171,6 +172,25 @@ void RudpTransport::DoSend(const std::string &data,
                                                             multiplexer_, ep));
   DoInsertConnection(connection);
   connection->StartSending(data, timeout);
+}
+
+void RudpTransport::Send(const std::string &data,
+                         ConnectionPtr connection,
+                         const Timeout &timeout) {
+  if(connection)
+    strand_.dispatch(std::bind(
+        static_cast<void (RudpTransport::*)
+            (const std::string&, const Timeout&, ConnectionPtr)>
+                (&RudpTransport::DoSend), shared_from_this(),
+                    data, timeout, connection));
+}
+
+void RudpTransport::DoSend(const std::string &data,
+                            const Timeout &timeout,
+                            ConnectionPtr connection) {
+  if (multiplexer_->IsOpen()) {
+    connection->StartSending(data, timeout);
+  }
 }
 
 void RudpTransport::InsertConnection(ConnectionPtr connection) {

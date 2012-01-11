@@ -36,7 +36,7 @@ namespace transport {
 ManagedConnectionRpcs::ManagedConnectionRpcs() {
   private_key_.reset(new Asym::PrivateKey(crypto_key_pair_.private_key));
 }
-    
+
 void ManagedConnectionRpcs::CreateConnection(TransportPtr transport, 
                                              const Endpoint &endpoint,
                                              const std::string &ref_id,
@@ -46,68 +46,84 @@ void ManagedConnectionRpcs::CreateConnection(TransportPtr transport,
   protobuf::ManagedConnectionInfoRequest request;
   request.set_identifier(ref_id);
   std::string message(message_handler->WrapMessage(request));
-
+  Info info;
+  info.endpoint = endpoint;
   // Connect callback to message handler for incoming parsed response or error
-   message_handler->on_managed_connection_info_response()->connect(
-       std::bind(&ManagedConnectionRpcs::ManagedConnectionInfoCallback, this,
-                 kSuccess, arg::_1, arg::_2, ref_id, callback, index,
-                 endpoint));
-   message_handler->on_error()->connect(
-       std::bind(&ManagedConnectionRpcs::ManagedConnectionInfoCallback, this,
-                 arg::_1, Info(), protobuf::ManagedConnectionInfoResponse(),
-                 ref_id, callback, index, endpoint));
+  message_handler->on_managed_connection_info_response()->connect(
+      std::bind(&ManagedConnectionRpcs::ManagedConnectionInfoCallback, this,
+                kSuccess, arg::_1, endpoint, arg::_2, ref_id, callback, index,
+                endpoint));
+  message_handler->on_error()->connect(
+      std::bind(&ManagedConnectionRpcs::ManagedConnectionInfoCallback, this,
+                arg::_1, info, arg::_2,
+                protobuf::ManagedConnectionInfoResponse(), ref_id, callback,
+                index, endpoint));
   transport->Send(message, endpoint, transport::kDefaultInitialTimeout);
 }
 
 void ManagedConnectionRpcs::ManagedConnectionInfoCallback(
     const TransportCondition &condition, const transport::Info &info,
+    const Endpoint &remote_endpoint,
     const protobuf::ManagedConnectionInfoResponse& response,
     const std::string &ref_id, CreateConnectionRpc callback,
     const size_t &index, const Endpoint &endpoint) {
+  if((remote_endpoint != endpoint) || (info.endpoint != endpoint))
+    return;
   //  sending a managedconnection request message to the endpoint in response
   // received.
-  if ((endpoint.ip != info.endpoint.ip) &&
-      (endpoint.port != info.endpoint.port))
-    return;
   if (condition == kSuccess) {
-    Endpoint endpoint;
-    endpoint.ip.from_string(response.endpoint().ip().c_str());
-    endpoint.port = response.endpoint().port();
+    Endpoint managed_endpoint;
+    managed_endpoint.ip.from_string(response.endpoint().ip().c_str());
+    managed_endpoint.port = static_cast<Port> (response.endpoint().port());
     MessageHandlerPtr message_handler(
       connected_objects_.GetMessageHandler(index));
     protobuf::ManagedConnectionRequest request;
     request.set_identifier(ref_id);
     std::string message(message_handler->WrapMessage(request));
+    Info managed_ep_info;
+    managed_ep_info.endpoint = managed_endpoint;
     // Connect callback to message handler for incoming parsed response or error
-     message_handler->on_managed_connection_response()->connect(
-         std::bind(&ManagedConnectionRpcs::CreateConnectionCallback, this,
-                   kSuccess, arg::_1, arg::_2, endpoint, callback, index));
-     message_handler->on_error()->connect(
-         std::bind(&ManagedConnectionRpcs::CreateConnectionCallback, this,
-                   arg::_1, Info(), protobuf::ManagedConnectionResponse(),
-                   Endpoint(), callback, index));
-     connected_objects_.GetTransport(index)->Send(message, endpoint,
-         transport::kDefaultInitialTimeout);
+    message_handler->on_managed_connection_response()->connect(
+        std::bind(&ManagedConnectionRpcs::CreateConnectionCallback, this,
+                  kSuccess, arg::_1, managed_endpoint, arg::_2,
+                  managed_endpoint, callback, index));
+    message_handler->on_error()->connect(
+        std::bind(&ManagedConnectionRpcs::CreateConnectionCallback, this,
+                  arg::_1, managed_ep_info, arg::_2,
+                  protobuf::ManagedConnectionResponse(), Endpoint(), callback,
+                  index));
+    connected_objects_.GetTransport(index)->Send(message, managed_endpoint,
+        transport::kDefaultInitialTimeout);
   } else {
     callback(kError, Endpoint(), std::string(""));
-  }  
+  }
 }
 
 void ManagedConnectionRpcs::CreateConnectionCallback(
     const TransportCondition& condition, const transport::Info &info,
+    const Endpoint &remote_endpoint,
     const protobuf::ManagedConnectionResponse &response,
     const Endpoint &endpoint, CreateConnectionRpc callback,
     const size_t &index) {
-  if ((endpoint.ip != info.endpoint.ip) &&
-      (endpoint.port != info.endpoint.port))
+  if((remote_endpoint != endpoint) || (info.endpoint != endpoint))
     return;
+//TODO (Prakash) check if all protobuf values exist????
   callback(response.result(), endpoint, response.identifier());
   connected_objects_.RemoveObject(index);
 }
-  
+
 uint32_t ManagedConnectionRpcs::Prepare(TransportPtr &transport,
                                     MessageHandlerPtr &message_handler) {
   message_handler.reset(new MessageHandler(private_key_));
+  // Connect message handler to transport for incoming raw messages
+  transport->on_message_received()->connect(
+      transport::OnMessageReceived::element_type::slot_type(
+          &MessageHandler::OnMessageReceived, message_handler.get(),
+          _1, _2, _3, _4).track_foreign(message_handler));
+  transport->on_error()->connect(
+      transport::OnError::element_type::slot_type(
+          &MessageHandler::OnError, message_handler.get(),
+          _1, _2).track_foreign(message_handler));
   return connected_objects_.AddObject(transport, message_handler);
 }
   
