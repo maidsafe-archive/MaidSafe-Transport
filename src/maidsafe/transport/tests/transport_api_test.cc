@@ -75,8 +75,7 @@ bptime::time_duration RudpParameters::kClientConnectTimeOut =
 namespace test {
 
 TestMessageHandler::TestMessageHandler(const std::string &id)
-    : finished_(false),
-      this_id_(id),
+    : this_id_(id),
       requests_received_(),
       responses_received_(),
       responses_sent_(),
@@ -298,23 +297,17 @@ void TransportAPI<T>::RunTransportTest(const int &num_messages,
     }
     ++sending_transports_itr;
   }
-  bool waiting(true);
-  int i(0);
-  do {
-    waiting = false;
-    boost::this_thread::sleep(boost::posix_time::seconds(1));
-    ++i;
-    for (auto it = msg_handlers.begin(); it != msg_handlers.end(); ++it){
-      if ((!(*it)->finished_) ||
-          ((*it)->responses_received().size() < (size_t)num_messages))
-        waiting = true;
+
+  auto sending_message_handlers_itr = sending_message_handlers_.begin();
+  while (sending_message_handlers_itr != sending_message_handlers_.end()) {
+    uint16_t timeout(10);
+    while ((*sending_message_handlers_itr)->responses_received().size() <
+           (num_messages * listening_transports_.size()) && timeout < 10000) {
+      Sleep(boost::posix_time::milliseconds(10));
+      timeout +=10;
     }
-  } while (waiting && (i < 10 * (num_messages + 1) * messages_length));
-  // without this sleep, test of RUDP/ManyToManyMultiMessage will fail,
-  // reporting received responses not match with the expected
-  // Note: only RUDP has this problem. TCP and UDP will not fail even without
-  //       this sleep
-  boost::this_thread::sleep(boost::posix_time::seconds(1));
+    ++sending_message_handlers_itr;
+  }
   work_.reset();
   work_1_.reset();
   work_2_.reset();
@@ -521,8 +514,10 @@ TYPED_TEST_P(TransportAPITest, BEH_OneToOneMultiMessage) {
 
 TYPED_TEST_P(TransportAPITest, BEH_OneToManySingleMessage) {
   this->SetupTransport(false, 0);
+  this->count_ = 0;
   for (int i = 0; i < 16; ++i) {
     this->SetupTransport(true, 0);
+    this->count_++;
   }
   ASSERT_NO_FATAL_FAILURE(this->RunTransportTest(1));
 }

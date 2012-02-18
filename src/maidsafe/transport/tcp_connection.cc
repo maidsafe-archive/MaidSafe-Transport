@@ -33,6 +33,7 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "boost/asio/read.hpp"
 #include "boost/asio/write.hpp"
+#include "boost/date_time/posix_time/posix_time.hpp"
 
 #include "maidsafe/transport/tcp_transport.h"
 #include "maidsafe/transport/log.h"
@@ -41,7 +42,7 @@ namespace asio = boost::asio;
 namespace bs = boost::system;
 namespace ip = asio::ip;
 namespace bptime = boost::posix_time;
-namespace arg = std::placeholders;
+namespace args = std::placeholders;
 
 namespace maidsafe {
 
@@ -74,8 +75,8 @@ void TcpConnection::Close() {
 }
 
 void TcpConnection::DoClose() {
-  boost::system::error_code ec;
-  socket_.close(ec);
+  bs::error_code ignored_ec;
+  socket_.close(ignored_ec);
   timer_.cancel();
   if (std::shared_ptr<TcpTransport> transport = transport_.lock())
     transport->RemoveConnection(shared_from_this());
@@ -88,7 +89,8 @@ void TcpConnection::StartReceiving() {
 
 void TcpConnection::DoStartReceiving() {
   StartReadSize();
-  CheckTimeout();
+  bs::error_code ignored_ec;
+  CheckTimeout(ignored_ec);
 }
 
 void TcpConnection::StartSending(const std::string &data,
@@ -101,10 +103,16 @@ void TcpConnection::StartSending(const std::string &data,
 
 void TcpConnection::DoStartSending() {
   StartConnect();
-  CheckTimeout();
 }
 
-void TcpConnection::CheckTimeout() {
+void TcpConnection::CheckTimeout(const bs::error_code &ec) {
+  if (ec && ec != boost::asio::error::operation_aborted) {
+    DLOG(ERROR) << "TcpConnection check timeout error: " << ec.message();
+    bs::error_code ignored_ec;
+    socket_.close(ignored_ec);
+    return;
+  }
+
   // If the socket is closed, it means the connection has been shut down.
   if (!socket_.is_open())
     return;
@@ -116,7 +124,7 @@ void TcpConnection::CheckTimeout() {
   } else {
     // Timeout not yet reached. Go back to sleep.
     timer_.async_wait(strand_.wrap(std::bind(&TcpConnection::CheckTimeout,
-                                             shared_from_this())));
+                                             shared_from_this(), args::_1)));
   }
 }
 
@@ -125,7 +133,7 @@ void TcpConnection::StartReadSize() {
 
   asio::async_read(socket_, asio::buffer(size_buffer_),
                    strand_.wrap(std::bind(&TcpConnection::HandleReadSize,
-                                          shared_from_this(), arg::_1)));
+                                          shared_from_this(), args::_1)));
 
   boost::posix_time::ptime now = asio::deadline_timer::traits_type::now();
   response_deadline_ = now + timeout_for_response_;
@@ -133,6 +141,9 @@ void TcpConnection::StartReadSize() {
 }
 
 void TcpConnection::HandleReadSize(const bs::error_code &ec) {
+  bs::error_code ignored_ec;
+  CheckTimeout(ignored_ec);
+
   // If the socket is closed, it means the timeout has been triggered.
   if (!socket_.is_open()) {
     return CloseOnError(kReceiveTimeout);
@@ -164,14 +175,17 @@ void TcpConnection::StartReadData() {
   asio::async_read(socket_, asio::buffer(data_buffer),
                    strand_.wrap(std::bind(&TcpConnection::HandleReadData,
                                           shared_from_this(),
-                                          arg::_1, arg::_2)));
+                                          args::_1, args::_2)));
 
-//   boost::posix_time::ptime now = asio::deadline_timer::traits_type::now();
-//   timer_.expires_at(std::min(response_deadline_, now + kStallTimeout));
-  timer_.expires_from_now(kDefaultInitialTimeout);
+  boost::posix_time::ptime now = asio::deadline_timer::traits_type::now();
+  timer_.expires_at(std::min(response_deadline_, now + kStallTimeout));
+//  timer_.expires_from_now(kDefaultInitialTimeout);
 }
 
 void TcpConnection::HandleReadData(const bs::error_code &ec, size_t length) {
+  bs::error_code ignored_ec;
+  CheckTimeout(ignored_ec);
+
   // If the socket is closed, it means the timeout has been triggered.
   if (!socket_.is_open()) {
     return CloseOnError(kReceiveTimeout);
@@ -236,7 +250,7 @@ void TcpConnection::StartConnect() {
 
   socket_.async_connect(remote_endpoint_,
                         strand_.wrap(std::bind(&TcpConnection::HandleConnect,
-                                               shared_from_this(), arg::_1)));
+                                               shared_from_this(), args::_1)));
 
   timer_.expires_from_now(kDefaultInitialTimeout);
 }
@@ -267,9 +281,11 @@ void TcpConnection::StartWrite() {
   asio_buffer[1] = boost::asio::buffer(data_buffer_);
   asio::async_write(socket_, asio_buffer,
                     strand_.wrap(std::bind(&TcpConnection::HandleWrite,
-                                           shared_from_this(), arg::_1)));
+                                           shared_from_this(), args::_1)));
 
   timer_.expires_from_now(tm_out);
+  bs::error_code error_code;
+  CheckTimeout(error_code);
 }
 
 void TcpConnection::HandleWrite(const bs::error_code &ec) {
