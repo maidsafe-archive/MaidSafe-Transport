@@ -71,7 +71,7 @@ class RudpConnection : public std::enable_shared_from_this<RudpConnection> {
   void StartSending(const std::string &data, const Timeout &timeout);
 
  private:
-friend ManagedConnectionMap;
+friend class ManagedConnectionMap;
   RudpConnection(const RudpConnection&);
   RudpConnection &operator=(const RudpConnection&);
 
