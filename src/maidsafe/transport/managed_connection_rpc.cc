@@ -30,18 +30,18 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 namespace arg = std::placeholders;
 
 namespace maidsafe {
-  
+
 namespace transport {
 
 ManagedConnectionRpcs::ManagedConnectionRpcs() {
   private_key_.reset(new Asym::PrivateKey(crypto_key_pair_.private_key));
 }
 
-void ManagedConnectionRpcs::CreateConnection(TransportPtr transport, 
+void ManagedConnectionRpcs::CreateConnection(TransportPtr transport,
                                              const Endpoint &endpoint,
                                              const std::string &ref_id,
                                              CreateConnectionRpc callback) {
-  MessageHandlerPtr message_handler;
+  RudpMessageHandlerPtr message_handler;
   uint32_t index = Prepare(transport, message_handler);
   protobuf::ManagedConnectionInfoRequest request;
   request.set_identifier(ref_id);
@@ -67,7 +67,7 @@ void ManagedConnectionRpcs::ManagedConnectionInfoCallback(
     const protobuf::ManagedConnectionInfoResponse& response,
     const std::string &ref_id, CreateConnectionRpc callback,
     const size_t &index, const Endpoint &endpoint) {
-  if((remote_endpoint != endpoint) || (info.endpoint != endpoint))
+  if ((remote_endpoint != endpoint) || (info.endpoint != endpoint))
     return;
   //  sending a managedconnection request message to the endpoint in response
   // received.
@@ -75,8 +75,10 @@ void ManagedConnectionRpcs::ManagedConnectionInfoCallback(
     Endpoint managed_endpoint;
     managed_endpoint.ip.from_string(response.endpoint().ip().c_str());
     managed_endpoint.port = static_cast<Port> (response.endpoint().port());
-    MessageHandlerPtr message_handler(
-      connected_objects_.GetMessageHandler(index));
+    RudpMessageHandlerPtr
+        message_handler(std::static_pointer_cast<RudpMessageHandler>(
+            connected_objects_.GetMessageHandler(index)));
+
     protobuf::ManagedConnectionRequest request;
     request.set_identifier(ref_id);
     std::string message(message_handler->WrapMessage(request));
@@ -100,21 +102,21 @@ void ManagedConnectionRpcs::ManagedConnectionInfoCallback(
 }
 
 void ManagedConnectionRpcs::CreateConnectionCallback(
-    const TransportCondition& condition, const transport::Info &info,
+    const TransportCondition& /*condition*/, const transport::Info &info,
     const Endpoint &remote_endpoint,
     const protobuf::ManagedConnectionResponse &response,
     const Endpoint &endpoint, CreateConnectionRpc callback,
     const size_t &index) {
-  if((remote_endpoint != endpoint) || (info.endpoint != endpoint))
+  if ((remote_endpoint != endpoint) || (info.endpoint != endpoint))
     return;
-//TODO (Prakash) check if all protobuf values exist????
+// TODO(Prakash): check if all protobuf values exist????
   callback(response.result(), endpoint, response.identifier());
   connected_objects_.RemoveObject(index);
 }
 
-uint32_t ManagedConnectionRpcs::Prepare(TransportPtr &transport,
-                                    MessageHandlerPtr &message_handler) {
-  message_handler.reset(new MessageHandler(private_key_));
+uint32_t ManagedConnectionRpcs::Prepare(TransportPtr transport,
+    RudpMessageHandlerPtr message_handler) {
+  message_handler.reset(new RudpMessageHandler(private_key_));
   // Connect message handler to transport for incoming raw messages
   transport->on_message_received()->connect(
       transport::OnMessageReceived::element_type::slot_type(
@@ -126,7 +128,6 @@ uint32_t ManagedConnectionRpcs::Prepare(TransportPtr &transport,
           _1, _2).track_foreign(message_handler));
   return connected_objects_.AddObject(transport, message_handler);
 }
-  
 }  // namesapace transport
 
 }  // namespace maidsafe

@@ -28,45 +28,11 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef MAIDSAFE_TRANSPORT_RPCS_H_
 #define MAIDSAFE_TRANSPORT_RPCS_H_
 
-#include <vector>
-
-#include "boost/function.hpp"
-
-#ifdef __MSVC__
-#  pragma warning(push)
-#  pragma warning(disable: 4127 4244 4267)
-#endif
-#include "maidsafe/transport/transport.pb.h"
-#ifdef __MSVC__
-#  pragma warning(pop)
-#endif
-
 namespace maidsafe {
 
 namespace transport {
 
-class Transport;
-struct Endpoint;
-struct TransportDetails;
-
-class Rpcs {
-  typedef boost::function<void(int, TransportDetails)> NatResultFunctor;
-
- public:
-  void NatDetection(const std::vector<Endpoint> &candidates,
-                    bool full,
-                    NatResultFunctor nrf);
-  void NatDetection(const std::vector<Endpoint> &candidates,
-                    std::shared_ptr<Transport> listening_transport,
-                    bool full,
-                    NatResultFunctor nrf);
-
- private:
-  void NatDetectionCallback(const protobuf::NatDetectionResponse &response,
-                            const std::vector<Endpoint> &candidates,
-                            NatResultFunctor nrf,
-                            int index);
-};
+class Rpcs {};
 
 }  // namespace transport
 

@@ -36,10 +36,12 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #  pragma warning(pop)
 #endif
 #include "boost/thread.hpp"
+#include "maidsafe/common/asio_service.h"
+#include "maidsafe/common/utils.h"
+
 #include "maidsafe/transport/tcp_transport.h"
 #include "maidsafe/transport/udp_transport.h"
 #include "maidsafe/transport/log.h"
-#include "maidsafe/common/utils.h"
 
 namespace bptime = boost::posix_time;
 
@@ -47,30 +49,31 @@ namespace maidsafe {
 
 namespace transport {
 
-boost::uint32_t RudpParameters::kDefaultWindowSize = 16;
-boost::uint32_t RudpParameters::kMaximumWindowSize = 512;
-boost::uint32_t RudpParameters::kDefaultSize = 1480;
-boost::uint32_t RudpParameters::kMaxSize = 25980;
-boost::uint32_t RudpParameters::kDefaultDataSize = 1450;
-boost::uint32_t RudpParameters::kMaxDataSize = 25950;
-bptime::time_duration RudpParameters::kDefaultSendTimeOut =
+boost::uint32_t RudpParameters::default_window_size = 16;
+boost::uint32_t RudpParameters::maximum_window_size = 512;
+boost::uint32_t RudpParameters::default_size = 1480;
+boost::uint32_t RudpParameters::max_size = 25980;
+boost::uint32_t RudpParameters::default_data_size = 1450;
+boost::uint32_t RudpParameters::max_data_size = 25950;
+bptime::time_duration RudpParameters::default_send_timeout =
                                                     bptime::milliseconds(1000);
-bptime::time_duration RudpParameters::kDefaultReceiveTimeOut =
+bptime::time_duration RudpParameters::default_receive_timeout =
                                                     bptime::milliseconds(200);
-bptime::time_duration RudpParameters::kDefaultAckTimeOut =
+bptime::time_duration RudpParameters::default_ack_timeout =
                                                     bptime::milliseconds(1000);
-bptime::time_duration RudpParameters::kDefaultSendDelay =
+bptime::time_duration RudpParameters::default_send_delay =
                                                     bptime::microseconds(1000);
-bptime::time_duration RudpParameters::kDefaultReceiveDelay =
+bptime::time_duration RudpParameters::default_receive_delay =
                                                     bptime::milliseconds(100);
-bptime::time_duration RudpParameters::kAckInterval =
+bptime::time_duration RudpParameters::ack_interval =
                                                     bptime::milliseconds(100);
-RudpParameters::ConnectionType RudpParameters::kConnectionType = kWireless;
-bptime::time_duration RudpParameters::kSpeedCalculateInverval =
+RudpParameters::ConnectionType RudpParameters::connection_type =
+                                                    RudpParameters::kWireless;
+bptime::time_duration RudpParameters::speed_calculate_inverval =
                                                     bptime::milliseconds(1000);
-boost::uint32_t RudpParameters::SlowSpeedThreshold = 1024;  // b/s
-bptime::time_duration RudpParameters::kClientConnectTimeOut =
-                                                    bptime::milliseconds(1000);
+boost::uint32_t RudpParameters::slow_speed_threshold = 1024;  // b/s
+bptime::time_duration RudpParameters::client_connect_timeout(
+                                                    bptime::milliseconds(1000));
 
 namespace test {
 
@@ -139,6 +142,14 @@ void TestMessageHandler::ClearContainers() {
   results_.clear();
 }
 
+void TestMessageHandler::ConnectCallback(const int &in_result,
+                                         int *out_result,
+                                         boost::condition_variable* condition) {
+  *out_result = in_result;
+  condition->notify_one();
+}
+
+
 IncomingMessages TestMessageHandler::requests_received() {
   boost::mutex::scoped_lock lock(mutex_);
   return requests_received_;
@@ -162,58 +173,24 @@ Results TestMessageHandler::results() {
 
 template <typename T>
 TransportAPI<T>::TransportAPI()
-    : asio_service_(),
-      asio_service_1_(),
-      asio_service_2_(),
-      asio_service_3_(),
-      work_(new boost::asio::io_service::work(asio_service_)),
-      work_1_(new boost::asio::io_service::work(asio_service_1_)),
-      work_2_(new boost::asio::io_service::work(asio_service_2_)),
-      work_3_(new boost::asio::io_service::work(asio_service_3_)),
+    : asio_services_(),
       listening_transports_(),
       listening_message_handlers_(),
       sending_transports_(),
       sending_message_handlers_(),
-      thread_group_(),
-      thread_group_1_(),
-      thread_group_2_(),
-      thread_group_3_(),
       mutex_(),
       request_messages_(),
       count_(0) {
-  for (int i = 0; i < kThreadGroupSize; ++i)
-    thread_group_.create_thread(
-        std::bind(static_cast<size_t(boost::asio::io_service::*)()>(
-            &boost::asio::io_service::run), &asio_service_));
-  for (int i = 0; i < kThreadGroupSize; ++i)
-    thread_group_1_.create_thread(
-        std::bind(static_cast<size_t(boost::asio::io_service::*)()>(
-            &boost::asio::io_service::run), &asio_service_1_));
-  for (int i = 0; i < kThreadGroupSize; ++i)
-    thread_group_2_.create_thread(
-        std::bind(static_cast<size_t(boost::asio::io_service::*)()>(
-            &boost::asio::io_service::run), &asio_service_2_));
-  for (int i = 0; i < kThreadGroupSize; ++i)
-    thread_group_3_.create_thread(
-        std::bind(static_cast<size_t(boost::asio::io_service::*)()>(
-            &boost::asio::io_service::run), &asio_service_3_));
-  // count_ = 0;
+  for (int i(0); i != 4; ++i) {
+    std::shared_ptr<AsioService> asio_service(new AsioService);
+    asio_service->Start(kThreadGroupSize);
+    asio_services_.push_back(asio_service);
+  }
 }
 
 template <typename T>
 TransportAPI<T>::~TransportAPI() {
-  work_.reset();
-  work_1_.reset();
-  work_2_.reset();
-  work_3_.reset();
-  asio_service_.stop();
-  asio_service_1_.stop();
-  asio_service_2_.stop();
-  asio_service_3_.stop();
-  thread_group_.join_all();
-  thread_group_1_.join_all();
-  thread_group_2_.join_all();
-  thread_group_3_.join_all();
+  StopAsioServices();
 }
 
 template <typename T>
@@ -221,9 +198,9 @@ void TransportAPI<T>::SetupTransport(bool listen, Port lport) {
   if (listen) {
     TransportPtr transport1;
     if (count_ < 8)
-      transport1 = TransportPtr(new T(asio_service_));
+      transport1 = TransportPtr(new T(asio_services_[0]->service()));
     else
-      transport1 = TransportPtr(new T(asio_service_3_));
+      transport1 = TransportPtr(new T(asio_services_[3]->service()));
 
     if (lport != Port(0)) {
       EXPECT_EQ(kSuccess,
@@ -236,22 +213,22 @@ void TransportAPI<T>::SetupTransport(bool listen, Port lport) {
   } else {
     TransportPtr transport1;
     if (count_ < 8)
-      transport1 = TransportPtr(new T(asio_service_1_));
+      transport1 = TransportPtr(new T(asio_services_[1]->service()));
     else
-      transport1 = TransportPtr(new T(asio_service_2_));
+      transport1 = TransportPtr(new T(asio_services_[2]->service()));
     sending_transports_.push_back(transport1);
   }
   ++count_;
 }
 
 template <typename T>
-void TransportAPI<T>::RunTransportTest(const int &num_messages,
+void TransportAPI<T>::RunTransportTest(const uint16_t &num_messages,
     const int &messages_length) {
   Endpoint endpoint;
   endpoint.ip = kIP;
   std::vector<TestMessageHandlerPtr> msg_handlers;
-  std::vector<TransportPtr>::iterator sending_transports_itr(
-      sending_transports_.begin());
+  auto sending_transports_itr(sending_transports_.begin());
+
   while (sending_transports_itr != sending_transports_.end()) {
     TestMessageHandlerPtr msg_h(new TestMessageHandler("Sender"));
     msg_handlers.push_back(msg_h);
@@ -281,12 +258,12 @@ void TransportAPI<T>::RunTransportTest(const int &num_messages,
     while (listening_transports_itr != listening_transports_.end()) {
       for (int i = 0 ; i < num_messages; ++i) {
         if (thread_size > kThreadGroupSize) {
-          asio_service_2_.post(boost::bind(
+          asio_services_[2]->service().post(boost::bind(
             &transport::test::TransportAPITest<T>::SendRPC, this,
             *sending_transports_itr, *listening_transports_itr,
             messages_length));
         } else {
-          asio_service_1_.post(boost::bind(
+          asio_services_[1]->service().post(boost::bind(
             &transport::test::TransportAPITest<T>::SendRPC, this,
             *sending_transports_itr, *listening_transports_itr,
             messages_length));
@@ -298,28 +275,26 @@ void TransportAPI<T>::RunTransportTest(const int &num_messages,
     ++sending_transports_itr;
   }
 
-  auto sending_message_handlers_itr = sending_message_handlers_.begin();
-  while (sending_message_handlers_itr != sending_message_handlers_.end()) {
-    uint16_t timeout(10);
-    while ((*sending_message_handlers_itr)->responses_received().size() <
-           (num_messages * listening_transports_.size()) && timeout < 10000) {
-      Sleep(boost::posix_time::milliseconds(10));
-      timeout +=10;
+  bool waiting(true);
+  int i(0);
+  do {
+    waiting = false;
+    boost::this_thread::sleep(boost::posix_time::seconds(1));
+    ++i;
+    for (auto it = msg_handlers.begin(); it != msg_handlers.end(); ++it) {
+      if ((!(*it)->finished_) ||
+          ((*it)->responses_received().size() < num_messages))
+        waiting = true;
     }
-    ++sending_message_handlers_itr;
-  }
-  work_.reset();
-  work_1_.reset();
-  work_2_.reset();
-  work_3_.reset();
-  asio_service_.stop();
-  asio_service_1_.stop();
-  asio_service_2_.stop();
-  asio_service_3_.stop();
-  thread_group_.join_all();
-  thread_group_1_.join_all();
-  thread_group_2_.join_all();
-  thread_group_3_.join_all();
+  } while (waiting && (i < 10 * (num_messages + 1) * messages_length));
+  // without this sleep, test of RUDP/ManyToManyMultiMessage will fail,
+  // reporting received responses not match with the expected
+  // Note: only RUDP has this problem. TCP and UDP will not fail even without
+  //       this sleep
+  // TODO(Fraser#5#): 2012-02-18 - Remove this sleep
+  boost::this_thread::sleep(boost::posix_time::seconds(1));
+
+  StopAsioServices();
   CheckMessages();
   auto sending_msg_handlers_itr(sending_message_handlers_.begin());
   while (sending_msg_handlers_itr != sending_message_handlers_.end()) {
@@ -341,7 +316,8 @@ void TransportAPI<T>::SendRPC(TransportPtr sender_pt,
     request = request + request;
   if (messages_length == 26)
     request = request.substr(0, request.size() - 100);
-  sender_pt->Send(request, Endpoint(kIP, listener_pt->listening_port()),
+
+    sender_pt->Send(request, Endpoint(kIP, listener_pt->listening_port()),
                   bptime::seconds(messages_length));
   boost::mutex::scoped_lock lock(mutex_);
   (request_messages_).push_back(request);
@@ -406,27 +382,36 @@ void TransportAPI<T>::CheckMessages() {
   }
 }
 
+template <typename T>
+void TransportAPI<T>::StopAsioServices() {
+  std::for_each(asio_services_.begin(),
+                asio_services_.end(),
+                [](std::shared_ptr<AsioService> asio_service) {
+      asio_service->Stop();
+  });
+}
+
 void RUDPSingleTransportAPITest::RestoreRUDPGlobalSettings() {
-  RudpParameters::kDefaultWindowSize = 16;
-  RudpParameters::kMaximumWindowSize = 512;
-  RudpParameters::kDefaultSize = 1480;
-  RudpParameters::kMaxSize = 25980;
-  RudpParameters::kDefaultDataSize = 1450;
-  RudpParameters::kMaxDataSize = 25950;
-  RudpParameters::kDefaultSendTimeOut = bptime::milliseconds(1000);
-  RudpParameters::kDefaultReceiveTimeOut = bptime::milliseconds(200);
-  RudpParameters::kDefaultAckTimeOut = bptime::milliseconds(1000);
-  RudpParameters::kDefaultSendDelay = bptime::microseconds(1000);
-  RudpParameters::kDefaultReceiveDelay = bptime::milliseconds(100);
-  RudpParameters::kAckInterval = bptime::milliseconds(100);
-  RudpParameters::kConnectionType = RudpParameters::kWireless;
-  RudpParameters::kSpeedCalculateInverval = bptime::milliseconds(1000);
-  RudpParameters::SlowSpeedThreshold = 1024;  // b/s
-  RudpParameters::kClientConnectTimeOut = bptime::milliseconds(1000);
+  RudpParameters::default_window_size = 16;
+  RudpParameters::maximum_window_size = 512;
+  RudpParameters::default_size = 1480;
+  RudpParameters::max_size = 25980;
+  RudpParameters::default_data_size = 1450;
+  RudpParameters::max_data_size = 25950;
+  RudpParameters::default_send_timeout = bptime::milliseconds(1000);
+  RudpParameters::default_receive_timeout = bptime::milliseconds(200);
+  RudpParameters::default_ack_timeout = bptime::milliseconds(1000);
+  RudpParameters::default_send_delay = bptime::microseconds(1000);
+  RudpParameters::default_receive_delay = bptime::milliseconds(100);
+  RudpParameters::ack_interval = bptime::milliseconds(100);
+  RudpParameters::connection_type = RudpParameters::kWireless;
+  RudpParameters::speed_calculate_inverval = bptime::milliseconds(1000);
+  RudpParameters::slow_speed_threshold = 1024;  // b/s
+  RudpParameters::client_connect_timeout = bptime::milliseconds(1000);
 }
 
 TYPED_TEST_P(TransportAPITest, BEH_StartStopListening) {
-  TransportPtr transport(new TypeParam(this->asio_service_));
+  TransportPtr transport(new TypeParam(this->asio_services_[0]->service()));
   EXPECT_EQ(Port(0), transport->listening_port());
   EXPECT_EQ(kInvalidPort, transport->StartListening(Endpoint(kIP, 0)));
   EXPECT_EQ(kSuccess, transport->StartListening(Endpoint(kIP, 2277)));
@@ -442,8 +427,8 @@ TYPED_TEST_P(TransportAPITest, BEH_StartStopListening) {
 }
 
 TYPED_TEST_P(TransportAPITest, BEH_Send) {
-  TransportPtr sender(new TypeParam(this->asio_service_));
-  TransportPtr listener(new TypeParam(this->asio_service_));
+  TransportPtr sender(new TypeParam(this->asio_services_[0]->service()));
+  TransportPtr listener(new TypeParam(this->asio_services_[0]->service()));
   Port p(20000);
   while (listener->StartListening(Endpoint(kIP, p)) != kSuccess)
     ++p;
@@ -568,8 +553,8 @@ INSTANTIATE_TYPED_TEST_CASE_P(UDP, TransportAPITest, UdpTransport);
 /** listener->StartListen(), then sender->Send(), then sender->StartListen()
  *  the sender->startListen will gnerate a socket binding error */
 TEST_F(RUDPSingleTransportAPITest, BEH_TRANS_BiDirectionCommunicate) {
-  TransportPtr sender(new RudpTransport(this->asio_service_));
-  TransportPtr listener(new RudpTransport(this->asio_service_));
+  TransportPtr sender(new RudpTransport(this->asio_services_[0]->service()));
+  TransportPtr listener(new RudpTransport(this->asio_services_[0]->service()));
   EXPECT_EQ(kSuccess, sender->StartListening(Endpoint(kIP, 2000)));
   EXPECT_EQ(kSuccess, listener->StartListening(Endpoint(kIP, 2001)));
   TestMessageHandlerPtr msgh_sender(new TestMessageHandler("Sender"));
@@ -604,8 +589,8 @@ TEST_F(RUDPSingleTransportAPITest, BEH_TRANS_BiDirectionCommunicate) {
                         _1, _2, _3, _4));
     auto listener_conn =
         listener->on_message_received()->connect(
-            boost::bind(&TestMessageHandler::DoOnResponseReceived, msgh_listener,
-                        _1, _2, _3, _4));
+            boost::bind(&TestMessageHandler::DoOnResponseReceived,
+                        msgh_listener, _1, _2, _3, _4));
     listener->Send("from listener", Endpoint(kIP, sender->listening_port()),
                  bptime::seconds(26));
     boost::this_thread::sleep(boost::posix_time::milliseconds(100));
@@ -614,8 +599,8 @@ TEST_F(RUDPSingleTransportAPITest, BEH_TRANS_BiDirectionCommunicate) {
   while (((msgh_listener->requests_received().size() == 0) ||
           (msgh_sender->requests_received().size() == 0)) &&
           (waited_seconds < 3)) {
-    boost::this_thread::sleep(boost::posix_time::milliseconds(1000));
-    ++ waited_seconds;
+    Sleep(boost::posix_time::milliseconds(1000));
+    ++waited_seconds;
   }
   EXPECT_EQ(1, msgh_listener->requests_received().size());
   EXPECT_EQ(1, msgh_listener->responses_received().size());
@@ -633,8 +618,8 @@ TEST_F(RUDPSingleTransportAPITest, BEH_TRANS_BiDirectionDuplexCommunicate) {
     listen_request = listen_request + listen_request;
   }
 
-  TransportPtr sender(new RudpTransport(this->asio_service_));
-  TransportPtr listener(new RudpTransport(this->asio_service_));
+  TransportPtr sender(new RudpTransport(this->asio_services_[0]->service()));
+  TransportPtr listener(new RudpTransport(this->asio_services_[0]->service()));
   EXPECT_EQ(kSuccess, sender->StartListening(Endpoint(kIP, 2000)));
   EXPECT_EQ(kSuccess, listener->StartListening(Endpoint(kIP, 2001)));
   TestMessageHandlerPtr msgh_sender(new TestMessageHandler("Sender"));
@@ -661,7 +646,7 @@ TEST_F(RUDPSingleTransportAPITest, BEH_TRANS_BiDirectionDuplexCommunicate) {
           (msgh_sender->responses_received().size() < 2)) &&
           (waited_seconds < 26)) {
     boost::this_thread::sleep(boost::posix_time::milliseconds(1000));
-    ++ waited_seconds;
+    ++waited_seconds;
   }
   // The sender only has DoOnRequestReceived hooked-up with OnMessageReceive
   // The listener only has DoOnResponseReceived hooked-up with OnMessageReceive
@@ -686,8 +671,8 @@ TEST_F(RUDPSingleTransportAPITest, BEH_TRANS_OneToOneSingleLargeMessage) {
 }
 
 TEST_F(RUDPSingleTransportAPITest, BEH_TRANS_OneToOneSeqMultipleLargeMessage) {
-  TransportPtr sender(new RudpTransport(this->asio_service_));
-  TransportPtr listener(new RudpTransport(this->asio_service_));
+  TransportPtr sender(new RudpTransport(this->asio_services_[0]->service()));
+  TransportPtr listener(new RudpTransport(this->asio_services_[0]->service()));
   EXPECT_EQ(kSuccess, listener->StartListening(Endpoint(kIP, 2001)));
   TestMessageHandlerPtr msgh_sender(new TestMessageHandler("Sender"));
   TestMessageHandlerPtr msgh_listener(new TestMessageHandler("listener"));
@@ -735,10 +720,11 @@ TEST_F(RUDPSingleTransportAPITest, BEH_TRANS_OneToOneSimMultipleLargeMessage) {
 
 TEST_F(RUDPSingleTransportAPITest, BEH_TRANS_DetectDroppedReceiver) {
   // Prevent the low speed detection will terminate the test earlier
-  RudpParameters::kSpeedCalculateInverval = bptime::seconds(100);
+  RudpParameters::speed_calculate_inverval = bptime::seconds(100);
 
-  TransportPtr sender(new RudpTransport(this->asio_service_));
-  TransportPtr listener(new RudpTransport(this->asio_service_));
+  TransportPtr sender(new RudpTransport(this->asio_services_[0]->service()));
+  TransportPtr listener(new RudpTransport(this->asio_services_[0]->service()));
+
   EXPECT_EQ(kSuccess, listener->StartListening(Endpoint(kIP, 2000)));
   TestMessageHandlerPtr msgh_sender(new TestMessageHandler("Sender"));
   TestMessageHandlerPtr msgh_listener(new TestMessageHandler("listener"));
@@ -757,7 +743,7 @@ TEST_F(RUDPSingleTransportAPITest, BEH_TRANS_DetectDroppedReceiver) {
     int waited_seconds(0);
     while ((msgh_sender->results().size() == 0) && (waited_seconds < 10)) {
       boost::this_thread::sleep(boost::posix_time::milliseconds(1000));
-      ++ waited_seconds;
+      ++waited_seconds;
       if (waited_seconds == 1)
           listener->StopListening();
     }
@@ -767,10 +753,10 @@ TEST_F(RUDPSingleTransportAPITest, BEH_TRANS_DetectDroppedReceiver) {
 
 TEST_F(RUDPSingleTransportAPITest, BEH_TRANS_DetectDroppedSender) {
   // Prevent the low speed detection will terminate the test earlier
-  RudpParameters::kSpeedCalculateInverval = bptime::seconds(100);
+  RudpParameters::speed_calculate_inverval = bptime::seconds(100);
 
-  TransportPtr sender(new RudpTransport(this->asio_service_));
-  TransportPtr listener(new RudpTransport(this->asio_service_));
+  TransportPtr sender(new RudpTransport(this->asio_services_[0]->service()));
+  TransportPtr listener(new RudpTransport(this->asio_services_[0]->service()));
   EXPECT_EQ(kSuccess, listener->StartListening(Endpoint(kIP, 2000)));
   TestMessageHandlerPtr msgh_sender(new TestMessageHandler("Sender"));
   TestMessageHandlerPtr msgh_listener(new TestMessageHandler("listener"));
@@ -789,7 +775,7 @@ TEST_F(RUDPSingleTransportAPITest, BEH_TRANS_DetectDroppedSender) {
     int waited_seconds(0);
     while ((msgh_listener->results().size() == 0) && (waited_seconds < 10)) {
       boost::this_thread::sleep(boost::posix_time::milliseconds(1000));
-      ++ waited_seconds;
+      ++waited_seconds;
       if (waited_seconds == 1)
         sender->StopListening();
     }
@@ -797,13 +783,49 @@ TEST_F(RUDPSingleTransportAPITest, BEH_TRANS_DetectDroppedSender) {
   }
 }
 
+TEST_F(RUDPSingleTransportAPITest, BEH_TRANS_Connect) {
+  std::shared_ptr<RudpTransport> client(
+      new RudpTransport(this->asio_services_[0]->service()));
+  std::shared_ptr<RudpTransport> server(
+      new RudpTransport(this->asio_services_[0]->service()));
+  Port port(RandomUint32() % 50000 + 1025);
+  while (server->StartListening(Endpoint(kIP, port)) != kSuccess)
+    port = RandomUint32() % 50000 + 1025;
+
+  TestMessageHandlerPtr msgh_client(new TestMessageHandler("client"));
+
+  int result(kError);
+  boost::condition_variable condition;
+  client->on_error()->connect(
+      boost::bind(&TestMessageHandler::ConnectCallback, msgh_client, _1,
+          &result, &condition));
+  {
+    boost::mutex::scoped_lock lock(mutex_);
+    client->Connect(Endpoint(kIP, port + 1), kDefaultInitialTimeout,
+                    std::bind(&TestMessageHandler::ConnectCallback,
+        msgh_client, args::_1, &result, &condition));
+    condition.wait(lock);
+    EXPECT_NE(kSuccess, result);
+  }
+
+  {
+    boost::mutex::scoped_lock lock(mutex_);
+    boost::condition_variable condition;
+    client->Connect(Endpoint(kIP, port), kDefaultInitialTimeout,
+                    std::bind(&TestMessageHandler::ConnectCallback,
+        msgh_client, args::_1, &result, &condition));
+    condition.wait(lock);
+    EXPECT_EQ(kSuccess, result);
+  }
+}
+
 TEST_F(RUDPSingleTransportAPITest, BEH_TRANS_SlowSendSpeed) {
   // Global Static Parameter set in the previous test will still valid
   // need to reset here
-  RudpParameters::kSpeedCalculateInverval = bptime::seconds(1);
+  RudpParameters::speed_calculate_inverval = bptime::seconds(1);
 
-  TransportPtr sender(new RudpTransport(this->asio_service_));
-  TransportPtr listener(new RudpTransport(this->asio_service_));
+  TransportPtr sender(new RudpTransport(this->asio_services_[0]->service()));
+  TransportPtr listener(new RudpTransport(this->asio_services_[0]->service()));
   EXPECT_EQ(kSuccess, listener->StartListening(Endpoint(kIP, 2010)));
   TestMessageHandlerPtr msgh_sender(new TestMessageHandler("Sender"));
   TestMessageHandlerPtr msgh_listener(new TestMessageHandler("listener"));
@@ -812,20 +834,20 @@ TEST_F(RUDPSingleTransportAPITest, BEH_TRANS_SlowSendSpeed) {
   listener->on_error()->connect(
       boost::bind(&TestMessageHandler::DoOnError, msgh_listener, _1));
   // slow send speed
-  RudpParameters::kDefaultSendDelay = bptime::milliseconds(1000);
-  RudpParameters::kAckInterval = bptime::milliseconds(500);
-  RudpParameters::kDefaultReceiveDelay = bptime::milliseconds(100);
-  RudpParameters::kDefaultWindowSize = 16;
-  RudpParameters::kMaximumWindowSize = 16;
-  RudpParameters::kDefaultSize = 1480;
-  RudpParameters::kMaxSize = 1480;
-  RudpParameters::kDefaultDataSize = 1450;
-  RudpParameters::kMaxDataSize = 1450;
+  RudpParameters::default_send_delay = bptime::milliseconds(1000);
+  RudpParameters::ack_interval = bptime::milliseconds(500);
+  RudpParameters::default_receive_delay = bptime::milliseconds(100);
+  RudpParameters::default_window_size = 16;
+  RudpParameters::maximum_window_size = 16;
+  RudpParameters::default_size = 1480;
+  RudpParameters::max_size = 1480;
+  RudpParameters::default_data_size = 1450;
+  RudpParameters::max_data_size = 1450;
 
   // max speed limit will be 16 * 1450 * 8 / 1 = 185600 b/s
   // observed speed: first second 197200 b/s (counted one more packet),
   //                 then 69600 b/s
-  RudpParameters::SlowSpeedThreshold = 200000;
+  RudpParameters::slow_speed_threshold = 200000;
 
   std::string request(RandomString(1));
   for (int i = 0; i < 22; ++i)
@@ -837,7 +859,7 @@ TEST_F(RUDPSingleTransportAPITest, BEH_TRANS_SlowSendSpeed) {
     int waited_seconds(0);
     while ((msgh_sender->results().size() == 0) && (waited_seconds < 10)) {
       boost::this_thread::sleep(boost::posix_time::milliseconds(1000));
-      ++ waited_seconds;
+      ++waited_seconds;
     }
     EXPECT_GT(3, waited_seconds);
   }
@@ -846,10 +868,10 @@ TEST_F(RUDPSingleTransportAPITest, BEH_TRANS_SlowSendSpeed) {
 TEST_F(RUDPSingleTransportAPITest, BEH_TRANS_SlowReceiveSpeed) {
   // Global Static Parameter set in the previous test will still valid
   // need to reset here
-  RudpParameters::kSpeedCalculateInverval = bptime::seconds(1);
+  RudpParameters::speed_calculate_inverval = bptime::seconds(1);
 
-  TransportPtr sender(new RudpTransport(this->asio_service_));
-  TransportPtr listener(new RudpTransport(this->asio_service_));
+  TransportPtr sender(new RudpTransport(this->asio_services_[0]->service()));
+  TransportPtr listener(new RudpTransport(this->asio_services_[0]->service()));
   EXPECT_EQ(kSuccess, listener->StartListening(Endpoint(kIP, 2100)));
   TestMessageHandlerPtr msgh_sender(new TestMessageHandler("Sender"));
   TestMessageHandlerPtr msgh_listener(new TestMessageHandler("listener"));
@@ -857,20 +879,20 @@ TEST_F(RUDPSingleTransportAPITest, BEH_TRANS_SlowReceiveSpeed) {
       boost::bind(&TestMessageHandler::DoOnError, msgh_sender, _1));
   listener->on_error()->connect(
       boost::bind(&TestMessageHandler::DoOnError, msgh_listener, _1));
-  RudpParameters::kDefaultSendDelay = bptime::milliseconds(100);
+  RudpParameters::default_send_delay = bptime::milliseconds(100);
   // slow receive speed
-  RudpParameters::kAckInterval = bptime::milliseconds(500);
-  RudpParameters::kDefaultReceiveDelay = bptime::milliseconds(100);
-  RudpParameters::kDefaultWindowSize = 16;
-  RudpParameters::kMaximumWindowSize = 16;
-  RudpParameters::kDefaultSize = 1480;
-  RudpParameters::kMaxSize = 1480;
-  RudpParameters::kDefaultDataSize = 1450;
-  RudpParameters::kMaxDataSize = 1450;
+  RudpParameters::ack_interval = bptime::milliseconds(500);
+  RudpParameters::default_receive_delay = bptime::milliseconds(100);
+  RudpParameters::default_window_size = 16;
+  RudpParameters::maximum_window_size = 16;
+  RudpParameters::default_size = 1480;
+  RudpParameters::max_size = 1480;
+  RudpParameters::default_data_size = 1450;
+  RudpParameters::max_data_size = 1450;
 
   // max speed limit will be 16 * 1450 * 8 / 0.5 = 371200 b/s
   // observed speed around 359600 b/s
-  RudpParameters::SlowSpeedThreshold = 371200;
+  RudpParameters::slow_speed_threshold = 371200;
 
   std::string request(RandomString(1));
   for (int i = 0; i < 23; ++i)
@@ -882,7 +904,7 @@ TEST_F(RUDPSingleTransportAPITest, BEH_TRANS_SlowReceiveSpeed) {
     int waited_seconds(0);
     while ((msgh_listener->results().size() == 0) && (waited_seconds < 10)) {
       boost::this_thread::sleep(boost::posix_time::milliseconds(1000));
-      ++ waited_seconds;
+      ++waited_seconds;
     }
     EXPECT_GT(3, waited_seconds);
   }

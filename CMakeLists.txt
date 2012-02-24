@@ -102,12 +102,6 @@ SET(ALL_FILES_NATPMP_DIR ${SOURCE_FILES_NATPMP_DIR} ${HEADER_FILES_NATPMP_DIR})
 SOURCE_GROUP("NAT-PMP Source Files" FILES ${SOURCE_FILES_NATPMP_DIR})
 SOURCE_GROUP("NAT-PMP Header Files" FILES ${HEADER_FILES_NATPMP_DIR})
 
-FILE(GLOB SOURCE_FILES_RUDP_DIR "${PROJECT_SOURCE_DIR}/src/maidsafe/transport/rudp/rudp_*.cc")
-FILE(GLOB HEADER_FILES_RUDP_DIR "${PROJECT_SOURCE_DIR}/src/maidsafe/transport/rudp/rudp_*.h")
-SET(ALL_FILES_RUDP_DIR ${SOURCE_FILES_RUDP_DIR} ${HEADER_FILES_RUDP_DIR})
-SOURCE_GROUP("RUDP Source Files" FILES ${SOURCE_FILES_RUDP_DIR})
-SOURCE_GROUP("RUDP Header Files" FILES ${HEADER_FILES_RUDP_DIR})
-
 FILE(GLOB SOURCE_FILES_TRANSPORT_DIR "${PROJECT_SOURCE_DIR}/src/maidsafe/transport/*.cc")
 FILE(GLOB HEADER_FILES_TRANSPORT_DIR "${PROJECT_SOURCE_DIR}/src/maidsafe/transport/*.h")
 SET(ALL_FILES_TRANSPORT_DIR ${SOURCE_FILES_TRANSPORT_DIR} ${HEADER_FILES_TRANSPORT_DIR})
@@ -126,6 +120,16 @@ FILE(GLOB SOURCE_FILES_UDP "${PROJECT_SOURCE_DIR}/src/maidsafe/transport/udp_*.c
 FILE(GLOB HEADER_FILES_UDP "${PROJECT_SOURCE_DIR}/src/maidsafe/transport/udp_*.h")
 SOURCE_GROUP("UDP Source Files" FILES ${SOURCE_FILES_UDP})
 SOURCE_GROUP("UDP Header Files" FILES ${HEADER_FILES_UDP})
+
+FILE(GLOB SOURCE_FILES_RUDP "${PROJECT_SOURCE_DIR}/src/maidsafe/transport/rudp_*.cc")
+FILE(GLOB HEADER_FILES_RUDP "${PROJECT_SOURCE_DIR}/src/maidsafe/transport/rudp_*.h")
+SOURCE_GROUP("RUDP Source Files" FILES ${SOURCE_FILES_RUDP})
+SOURCE_GROUP("RUDP Header Files" FILES ${HEADER_FILES_RUDP})
+
+FILE(GLOB SOURCE_FILES_NAT_DETECTION "${PROJECT_SOURCE_DIR}/src/maidsafe/transport/nat_detection*.cc")
+FILE(GLOB HEADER_FILES_NAT_DETECTION "${PROJECT_SOURCE_DIR}/src/maidsafe/transport/nat_detection*.h")
+SOURCE_GROUP("NAT Detection Source Files" FILES ${SOURCE_FILES_NAT_DETECTION})
+SOURCE_GROUP("NAT Detection Header Files" FILES ${HEADER_FILES_NAT_DETECTION})
 
 FILE(GLOB SOURCE_FILES_UPNP_DIR "${PROJECT_SOURCE_DIR}/src/maidsafe/transport/upnp/*.cc")
 FILE(GLOB HEADER_FILES_UPNP_DIR "${PROJECT_SOURCE_DIR}/src/maidsafe/transport/upnp/*.h")
@@ -160,9 +164,8 @@ MS_ADD_EXECUTABLE(TESTtransport Tests ${ALL_FILES_TEST_TRANSPORT_DIR})
 
 TARGET_LINK_LIBRARIES(maidsafe_transport_static
                         maidsafe_common_static
-                        protobuf_static
-                        boost_date_time)
-TARGET_LINK_LIBRARIES(TESTtransport maidsafe_transport_static gtest_static)
+                        protobuf_static)
+TARGET_LINK_LIBRARIES(TESTtransport maidsafe_transport_static gtest_static gmock_static)
 # TARGET_LINK_LIBRARIES(TESTnatpmp maidsafe_transport_static gtest_static)
 # TARGET_LINK_LIBRARIES(TESTupnp maidsafe_transport_static gtest_static)
 
@@ -179,16 +182,12 @@ IF(MSVC)
                                 PROPERTIES COMPILE_FLAGS "/W0")
 ELSEIF(UNIX)
   FILE(GLOB PROTO_SOURCE_FILES "${PROJECT_SOURCE_DIR}/src/maidsafe/transport/*.pb.cc")
-  SET_SOURCE_FILES_PROPERTIES(${PROJECT_SOURCE_DIR}/src/maidsafe/transport/tcp_connection.cc
-                              ${PROJECT_SOURCE_DIR}/src/maidsafe/transport/tcp_transport.cc
-                              ${PROJECT_SOURCE_DIR}/src/maidsafe/transport/udp_request.cc
-                              ${PROJECT_SOURCE_DIR}/src/maidsafe/transport/udp_transport.cc
-                              ${PROJECT_SOURCE_DIR}/src/maidsafe/transport/tests/transport_api_test.cc
-                              ${PROJECT_SOURCE_DIR}/src/maidsafe/transport/tests/tcp_transport_test.cc
-                              ${PROJECT_SOURCE_DIR}/src/maidsafe/transport/tests/udp_transport_test.cc
-                                PROPERTIES COMPILE_FLAGS "-Wno-effc++")
+#  SET_SOURCE_FILES_PROPERTIES(${PROJECT_SOURCE_DIR}/src/maidsafe/transport/tcp_connection.cc
+#                                PROPERTIES COMPILE_FLAGS "-Wno-effc++")
   SET_SOURCE_FILES_PROPERTIES(${PROTO_SOURCE_FILES} PROPERTIES COMPILE_FLAGS "-w")
 ENDIF()
+
+
 
 
 ###################################################################################################
@@ -217,8 +216,14 @@ SET(MAIDSAFE_TRANSPORT_INSTALL_FILES
       ${PROJECT_SOURCE_DIR}/src/maidsafe/transport/transport.h
       ${PROJECT_SOURCE_DIR}/src/maidsafe/transport/version.h
       ${PROJECT_SOURCE_DIR}/src/maidsafe/transport/message_handler.h
+      ${PROJECT_SOURCE_DIR}/src/maidsafe/transport/contact.h
       ${PROJECT_SOURCE_DIR}/src/maidsafe/transport/tcp_transport.h
       ${PROJECT_SOURCE_DIR}/src/maidsafe/transport/udp_transport.h
+      ${PROJECT_SOURCE_DIR}/src/maidsafe/transport/rudp_transport.h
+      ${PROJECT_SOURCE_DIR}/src/maidsafe/transport/rudp_parameters.h
+      ${PROJECT_SOURCE_DIR}/src/maidsafe/transport/rudp_message_handler.h
+      ${PROJECT_SOURCE_DIR}/src/maidsafe/transport/nat_detection.h
+      ${PROJECT_SOURCE_DIR}/src/maidsafe/transport/nat_traversal.h
       ${PROJECT_SOURCE_DIR}/src/maidsafe/transport/utils.h)  # TODO - remove utils.h once NAT detection is implemented and this is not #included by node_container.h
 
 MS_INSTALL_LIBS(maidsafe_transport_static)

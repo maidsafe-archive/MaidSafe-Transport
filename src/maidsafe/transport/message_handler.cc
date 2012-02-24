@@ -28,14 +28,7 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "maidsafe/transport/message_handler.h"
 #include "boost/lexical_cast.hpp"
 #include "maidsafe/transport/log.h"
-#ifdef __MSVC__
-#  pragma warning(push)
-#  pragma warning(disable: 4127 4244 4267)
-#endif
-#include "maidsafe/transport/transport.pb.h"
-#ifdef __MSVC__
-#  pragma warning(pop)
-#endif
+#include "maidsafe/transport/transport_pb.h"
 
 namespace maidsafe {
 
@@ -48,25 +41,28 @@ void MessageHandler::OnMessageReceived(const std::string &request,
   if (request.empty())
     return;
   SecurityType security_type = request.at(0);
-  if (security_type && !private_key_)
-    return;
-
   std::string serialised_message(request.substr(1));
-  if (security_type & kAsymmetricEncrypt) {
-    std::string aes_seed = request.substr(1, 512);
-    if (aes_seed.size() != 512)
-      return;
 
-    std::string encrypt_aes_seed;
-    Asym::Decrypt(aes_seed, *private_key_, &encrypt_aes_seed);
-    if (encrypt_aes_seed.empty()) {
-      DLOG(WARNING) << "Failed to decrypt: encrypt_aes_seed is empty.";
+  if (security_type != kNone) {
+    if (!private_key_)
       return;
+    if (security_type & kAsymmetricEncrypt) {
+      std::string aes_seed = request.substr(1, 512);
+      if (aes_seed.size() != 512)
+        return;
+
+      std::string encrypt_aes_seed;
+      Asym::Decrypt(aes_seed, *private_key_, &encrypt_aes_seed);
+      if (encrypt_aes_seed.empty()) {
+        DLOG(WARNING) << "Failed to decrypt: encrypt_aes_seed is empty.";
+        return;
+      }
+
+      std::string aes_key = encrypt_aes_seed.substr(0, 32);
+      std::string kIV = encrypt_aes_seed.substr(32, 16);
+      serialised_message = crypto::SymmDecrypt(request.substr(513), aes_key,
+                                               kIV);
     }
-
-    std::string aes_key = encrypt_aes_seed.substr(0, 32);
-    std::string kIV = encrypt_aes_seed.substr(32, 16);
-    serialised_message = crypto::SymmDecrypt(request.substr(513), aes_key, kIV);
   }
 
   protobuf::WrapperMessage wrapper;
@@ -82,237 +78,14 @@ void MessageHandler::OnError(const TransportCondition &transport_condition,
   (*on_error_)(transport_condition, remote_endpoint);
 }
 
-std::string MessageHandler::WrapMessage(
-    const protobuf::ManagedEndpointMessage &msg) {
-  if (!msg.IsInitialized())
-    return "";
-  return MakeSerialisedWrapperMessage(kManagedEndpointMessage,
-                                      msg.SerializeAsString(), kNone,
-                                      Asym::PublicKey());
-}
-
-std::string MessageHandler::WrapMessage(
-    const protobuf::ManagedConnectionInfoRequest &msg) {
-  if (!msg.IsInitialized())
-    return "";
-  return MakeSerialisedWrapperMessage(kManagedConnectionInfoRequest,
-                                      msg.SerializeAsString(), kNone,
-                                      Asym::PublicKey());
-}
-
-std::string MessageHandler::WrapMessage(
-    const protobuf::ManagedConnectionInfoResponse &msg) {
-  if (!msg.IsInitialized())
-    return "";
-  return MakeSerialisedWrapperMessage(kManagedConnectionInfoResponse,
-                                      msg.SerializeAsString(), kNone,
-                                      Asym::PublicKey());
-}
-
-std::string MessageHandler::WrapMessage(
-    const protobuf::ManagedConnectionRequest &msg) {
-  if (!msg.IsInitialized())
-    return "";
-  return MakeSerialisedWrapperMessage(kManagedConnectionRequest,
-                                      msg.SerializeAsString(), kNone,
-                                      Asym::PublicKey());
-}
-
-std::string MessageHandler::WrapMessage(
-    const protobuf::ManagedConnectionResponse &msg) {
-  if (!msg.IsInitialized())
-    return "";
-  return MakeSerialisedWrapperMessage(kManagedConnectionResponse,
-                                      msg.SerializeAsString(), kNone,
-                                      Asym::PublicKey());
-}
-std::string MessageHandler::WrapMessage(
-    const protobuf::NatDetectionRequest &msg) {
-  if (!msg.IsInitialized())
-    return "";
-  return MakeSerialisedWrapperMessage(kNatDetectionRequest,
-                                      msg.SerializeAsString(), kNone,
-                                      Asym::PublicKey());
-}
-
-std::string MessageHandler::WrapMessage(
-    const protobuf::NatDetectionResponse &msg) {
-  if (!msg.IsInitialized())
-    return "";
-  return MakeSerialisedWrapperMessage(kNatDetectionResponse,
-                                      msg.SerializeAsString(), kNone,
-                                      Asym::PublicKey());
-}
-
-std::string MessageHandler::WrapMessage(
-    const protobuf::ProxyConnectRequest &msg) {
-  if (!msg.IsInitialized())
-    return "";
-  return MakeSerialisedWrapperMessage(kProxyConnectRequest,
-                                      msg.SerializeAsString(), kNone,
-                                      Asym::PublicKey());
-}
-
-std::string MessageHandler::WrapMessage(
-    const protobuf::ProxyConnectResponse &msg) {
-  if (!msg.IsInitialized())
-    return "";
-  return MakeSerialisedWrapperMessage(kProxyConnectResponse,
-                                      msg.SerializeAsString(), kNone,
-                                      Asym::PublicKey());
-}
-
-std::string MessageHandler::WrapMessage(
-    const protobuf::ForwardRendezvousRequest &msg) {
-  if (!msg.IsInitialized())
-    return "";
-  return MakeSerialisedWrapperMessage(kForwardRendezvousRequest,
-                                      msg.SerializeAsString(), kNone,
-                                      Asym::PublicKey());
-}
-
-std::string MessageHandler::WrapMessage(
-    const protobuf::ForwardRendezvousResponse &msg) {
-  if (!msg.IsInitialized())
-    return "";
-  return MakeSerialisedWrapperMessage(kForwardRendezvousResponse,
-                                      msg.SerializeAsString(), kNone,
-                                      Asym::PublicKey());
-}
-
-std::string MessageHandler::WrapMessage(
-    const protobuf::RendezvousRequest &msg) {
-  if (!msg.IsInitialized())
-    return "";
-  return MakeSerialisedWrapperMessage(kRendezvousRequest,
-                                      msg.SerializeAsString(), kNone,
-                                      Asym::PublicKey());
-}
-
-std::string MessageHandler::WrapMessage(
-    const protobuf::RendezvousAcknowledgement &msg) {
-  if (!msg.IsInitialized())
-    return "";
-  return MakeSerialisedWrapperMessage(kRendezvousAcknowledgement,
-                                      msg.SerializeAsString(), kNone,
-                                      Asym::PublicKey());
-}
-
 void MessageHandler::ProcessSerialisedMessage(
-    const int &message_type,
-    const std::string &payload,
+    const int &/*message_type*/,
+    const std::string &/*payload*/,
     const SecurityType &/*security_type*/,
     const std::string &/*message_signature*/,
-    const Info &info,
-    std::string *message_response,
-    Timeout *timeout) {
-  message_response->clear();
-  *timeout = kImmediateTimeout;
-
-  switch (message_type) {
-    case kManagedEndpointMessage: {
-      protobuf::ManagedEndpointMessage request;
-      if (request.ParseFromString(payload) && request.IsInitialized()) {
-        protobuf::ManagedEndpointMessage response;
-        (*on_managed_endpoint_message_)(request, &response, timeout);
-        *message_response = WrapMessage(response);
-      }
-      break;
-    }
-    case kManagedConnectionInfoRequest: {
-      protobuf::ManagedConnectionInfoRequest request;
-      if (request.ParseFromString(payload) && request.IsInitialized()) {
-        protobuf::ManagedConnectionInfoResponse response;
-        (*on_managed_connection_info_request_)(info, request, &response,
-             timeout);
-        *message_response = WrapMessage(response);
-      }
-      break;
-    }
-    case kManagedConnectionInfoResponse: {
-      protobuf::ManagedConnectionInfoResponse response;
-      if (response.ParseFromString(payload) && response.IsInitialized()) {
-        (*on_managed_connection_info_response_)(info, response);
-      }
-      break;
-    }
-    case kManagedConnectionRequest: {
-      protobuf::ManagedConnectionRequest request;
-      if (request.ParseFromString(payload) && request.IsInitialized()) {
-        protobuf::ManagedConnectionResponse response;
-        (*on_managed_connection_request_)(info, request, &response,
-             timeout);
-        *message_response = WrapMessage(response);
-      }
-      break;
-    }
-    case kManagedConnectionResponse: {
-      protobuf::ManagedConnectionResponse response;
-      if (response.ParseFromString(payload) && response.IsInitialized()) {
-        (*on_managed_connection_response_)(info, response, timeout);
-      }
-      break;
-    }
-    case kNatDetectionRequest: {
-      protobuf::NatDetectionRequest request;
-      if (request.ParseFromString(payload) && request.IsInitialized()) {
-        protobuf::NatDetectionResponse response;
-        (*on_nat_detection_request_)(request, &response, timeout);
-        *message_response = WrapMessage(response);
-      }
-      break;
-    }
-    case kNatDetectionResponse: {
-      protobuf::NatDetectionResponse response;
-      if (response.ParseFromString(payload) && response.IsInitialized())
-        (*on_nat_detection_response_)(response);
-      break;
-    }
-    case kProxyConnectRequest: {
-      protobuf::ProxyConnectRequest request;
-      if (request.ParseFromString(payload) && request.IsInitialized()) {
-        protobuf::ProxyConnectResponse response;
-        (*on_proxy_connect_request_)(request, &response, timeout);
-        *message_response = WrapMessage(response);
-      }
-      break;
-    }
-    case kProxyConnectResponse: {
-      protobuf::ProxyConnectResponse response;
-      if (response.ParseFromString(payload) && response.IsInitialized())
-        (*on_proxy_connect_response_)(response);
-      break;
-    }
-    case kForwardRendezvousRequest: {
-      protobuf::ForwardRendezvousRequest request;
-      if (request.ParseFromString(payload) && request.IsInitialized()) {
-        protobuf::ForwardRendezvousResponse response;
-        (*on_forward_rendezvous_request_)(request, &response, timeout);
-        *message_response = WrapMessage(response);
-      }
-      break;
-    }
-    case kForwardRendezvousResponse: {
-      protobuf::ForwardRendezvousResponse response;
-      if (response.ParseFromString(payload) && response.IsInitialized())
-        (*on_forward_rendezvous_response_)(response);
-      break;
-    }
-    case kRendezvousRequest: {
-      protobuf::RendezvousRequest request;
-      if (request.ParseFromString(payload) && request.IsInitialized())
-        (*on_rendezvous_request_)(request);
-      break;
-    }
-    case kRendezvousAcknowledgement: {
-      protobuf::RendezvousAcknowledgement acknowledgement;
-      if (acknowledgement.ParseFromString(payload) &&
-          acknowledgement.IsInitialized())
-        (*on_rendezvous_acknowledgement_)(acknowledgement);
-      break;
-    }
-  }
-}
+    const Info & /*info*/,
+    std::string* /*message_response*/,
+    Timeout* /*timeout*/) {}
 
 std::string MessageHandler::MakeSerialisedWrapperMessage(
     const int &message_type,
@@ -322,50 +95,55 @@ std::string MessageHandler::MakeSerialisedWrapperMessage(
   protobuf::WrapperMessage wrapper_message;
   wrapper_message.set_msg_type(message_type);
   wrapper_message.set_payload(payload);
-
-  // If we asked for security but provided no securifier, fail.
-  if (security_type && !private_key_) {
-    DLOG(ERROR) << "MakeSerialisedWrapperMessage - type " << message_type
-                << " - PrivateKey Validation Failed.";
-    return "";
-  }
-
-  // Handle signing
-  if (security_type & kSign) {
-    std::string signature;
-    if (Asym::Sign(boost::lexical_cast<std::string>(message_type) + payload,
-                   *private_key_,
-                   &signature) != kSuccess) {
-      DLOG(ERROR) << "MakeSerialisedWrapperMessage - type " << message_type
-                  << " - Sign Failed.";
-      return "";
-    }
-    wrapper_message.set_message_signature(signature);
-  }
-
-  // Handle encryption
   std::string final_message(1, security_type);
-  if (security_type & kAsymmetricEncrypt) {
-    if (!Asym::ValidateKey(recipient_public_key)) {
-      DLOG(ERROR) << "MakeSerialisedWrapperMessage - type " << message_type
-                  << " - PublicKey Validation Failed.";
-      return "";
-    }
-    std::string seed = RandomString(48);
-    std::string key = seed.substr(0, 32);
-    std::string kIV = seed.substr(32, 16);
-    std::string encrypt_message =
-        crypto::SymmEncrypt(wrapper_message.SerializeAsString(), key, kIV);
-    std::string encrypt_aes_seed;
-    if (Asym::Encrypt(seed, recipient_public_key, &encrypt_aes_seed) !=
-        kSuccess) {
-      DLOG(ERROR) << "MakeSerialisedWrapperMessage - type " << message_type
-                  << " - Encryption Failed.";
-      return "";
-    }
-    final_message += encrypt_aes_seed + encrypt_message;
-  } else {
+
+  // No security.
+  if (security_type == kNone) {
     final_message += wrapper_message.SerializeAsString();
+  } else {
+    // If we asked for security but provided no securifier, fail.
+    if (security_type && !private_key_) {
+      DLOG(ERROR) << "MakeSerialisedWrapperMessage - type " << message_type
+                  << " - PrivateKey Validation Failed.";
+      return "";
+    }
+
+    // Handle signing
+    if (security_type & kSign) {
+      std::string signature;
+      if (Asym::Sign(boost::lexical_cast<std::string>(message_type) + payload,
+                    *private_key_,
+                    &signature) != kSuccess) {
+       DLOG(ERROR) << "MakeSerialisedWrapperMessage - type " << message_type
+                   << " - Sign Failed.";
+       return "";
+      }
+      wrapper_message.set_message_signature(signature);
+    }
+
+    // Handle encryption
+    if (security_type & kAsymmetricEncrypt) {
+      if (!Asym::ValidateKey(recipient_public_key)) {
+        DLOG(ERROR) << "MakeSerialisedWrapperMessage - type " << message_type
+                    << " - PublicKey Validation Failed.";
+        return "";
+      }
+      std::string seed = RandomString(48);
+      std::string key = seed.substr(0, 32);
+      std::string kIV = seed.substr(32, 16);
+      std::string encrypt_message =
+          crypto::SymmEncrypt(wrapper_message.SerializeAsString(), key, kIV);
+      std::string encrypt_aes_seed;
+      if (Asym::Encrypt(seed, recipient_public_key, &encrypt_aes_seed) !=
+          kSuccess) {
+        DLOG(ERROR) << "MakeSerialisedWrapperMessage - type " << message_type
+                    << " - Encryption Failed.";
+        return "";
+      }
+      final_message += encrypt_aes_seed + encrypt_message;
+    } else {
+      final_message += wrapper_message.SerializeAsString();
+    }
   }
   return final_message;
 }

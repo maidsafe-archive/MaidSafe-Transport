@@ -56,11 +56,10 @@ int main(int argc, char **argv) {
   // Show all VLOG(m) messages for m <= this.
   FLAGS_v = 0;
 
-  // Log messages from MaidSafe-Common.
-
-  // Log messages from MaidSafe-Common.
-  FLAGS_ms_logging_common = google::ERROR;
-  FLAGS_ms_logging_transport = google::ERROR;
+  // Log messages at or above this level. Severity levels are INFO, WARNING,
+  // ERROR, and FATAL (0 to 3 respectively).
+  FLAGS_ms_logging_common = google::FATAL;
+  FLAGS_ms_logging_transport = google::WARNING;
 
   testing::InitGoogleTest(&argc, argv);
   int result(RUN_ALL_TESTS());

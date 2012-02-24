@@ -25,8 +25,8 @@ TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#ifndef MAIDSAFE_TRANSPORT_RPCS_OBJECTS_H_
-#define MAIDSAFE_TRANSPORT_RPCS_OBJECTS_H_
+#ifndef MAIDSAFE_TRANSPORT_RPC_OBJECTS_H_
+#define MAIDSAFE_TRANSPORT_RPC_OBJECTS_H_
 
 #include <cstdint>
 #include <string>
@@ -46,9 +46,8 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #endif
 #include "boost/thread/shared_mutex.hpp"
 #include "boost/thread/locks.hpp"
-#include "maidsafe/transport/rudp/rudp_transport.h"
+#include "maidsafe/transport/rudp_transport.h"
 
-//#include "maidsafe/dht/config.h"
 #include "maidsafe/transport/message_handler.h"
 #include "maidsafe/transport/version.h"
 
@@ -108,7 +107,7 @@ class ConnectedObjectsList  {
 
   // Return the TransportPtr of the index
   MessageHandlerPtr GetMessageHandler(uint32_t index);
-  
+
   // Returns the size of the connected objects MI
   size_t Size();
 
@@ -131,4 +130,4 @@ class ConnectedObjectsList  {
 
 }  // namespace maidsafe
 
-#endif  // MAIDSAFE_DHT_RPCS_OBJECTS_H_
+#endif  // MAIDSAFE_TRANSPORT_RPC_OBJECTS_H_

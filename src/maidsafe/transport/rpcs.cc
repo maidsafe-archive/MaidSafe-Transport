@@ -25,27 +25,11 @@ TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#include <vector>
-
 #include "maidsafe/transport/rpcs.h"
 
 namespace maidsafe {
 
 namespace transport {
-
-void Rpcs::NatDetection(const std::vector<Endpoint> &/*candidates*/,
-                        bool /*full*/,
-                        NatResultFunctor /*nat_result_functor*/) {}
-
-void Rpcs::NatDetection(const std::vector<Endpoint> &/*candidates*/,
-                        std::shared_ptr<Transport> /*listening_transport*/,
-                        bool /*full*/,
-                        NatResultFunctor /*nat_result_functor*/) {}
-
-void Rpcs::NatDetectionCallback(const protobuf::NatDetectionResponse &/*response*/,  // NOLINT
-                                const std::vector<Endpoint> &/*candidates*/,
-                                NatResultFunctor /*nat_result_functor*/,
-                                int /*index*/) {}
 
 }  // namespace transport
 

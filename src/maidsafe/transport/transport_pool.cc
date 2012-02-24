@@ -28,7 +28,7 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "maidsafe/transport/transport_pool.h"
 
 #include "maidsafe/transport/managed_connection.h"
-#include "maidsafe/transport/rudp/rudp_connection.h"
+#include "maidsafe/transport/rudp_connection.h"
 
 namespace maidsafe {
 
@@ -42,14 +42,15 @@ RudpTransportPtr TransportPool::GetAvailableTransport() {
   return transport_;
 }
 
-RudpConnectionPtr TransportPool::GetConnection(Endpoint endpoint) {
-  RudpConnectionPtr  connection;//(transport->GetConnection(Endpoint endpoint));
+RudpConnectionPtr TransportPool::GetConnection(Endpoint /*endpoint*/) {
+//  RudpConnectionPtr  connection (transport->GetConnection(Endpoint endpoint));
+  RudpConnectionPtr  connection;
   return connection;
 }
 
-//RudpTransportPtr TransportPool::GetTransport(Endpoint endpoint) {
+// RudpTransportPtr TransportPool::GetTransport(Endpoint endpoint) {
 //  return transport_;
-//}
+// }
 
 }  // namespace transport
 

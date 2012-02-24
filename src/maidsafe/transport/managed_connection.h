@@ -25,6 +25,9 @@ TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
+#ifndef MAIDSAFE_TRANSPORT_MANAGED_CONNECTION_H_
+#define MAIDSAFE_TRANSPORT_MANAGED_CONNECTION_H_
+
 #include <string>
 #include <sstream>
 
@@ -139,7 +142,7 @@ typedef std::shared_ptr<boost::signals2::signal<void(const TransportCondition &,
 // as ConnectionId directly.
 class ManagedConnectionMap  {
  public:
-  ManagedConnectionMap(boost::asio::io_service &io_service,
+  ManagedConnectionMap(boost::asio::io_service &io_service,  //NOLINT
                        const std::string &ref_id,
                        TransportPoolPtr transport_pool);
 
@@ -219,17 +222,17 @@ class ManagedConnectionMap  {
                                   const Endpoint &peer,
                                   const std::string &reference_id,
                                   const boost::uint32_t &connection_id);
-  //boost::int32_t InsertConnection(const ConnectionPtr connection,
-  //                                const Endpoint &peer,
-  //                                const std::string &reference_id,
-  //                                const boost::uint16_t &port);
+//  boost::int32_t InsertConnection(const ConnectionPtr connection,
+//                                  const Endpoint &peer,
+//                                  const std::string &reference_id,
+//                                  const boost::uint16_t &port);
 
   // Return the ConnectionPtr of the node
   RudpConnectionPtr GetConnectionByPeerId(const std::string &peer_id);
   RudpConnectionPtr GetConnection(const boost::uint32_t &connection_id);
   RudpConnectionPtr GetConnection(const std::string &reference_id);
 
-   /** Generate next unique empty connection ID */
+  /** Generate next unique empty connection ID */
   boost::uint16_t GenerateConnectionID();
 
   /** Check if the input peer_id already contained in the multi-index */
@@ -240,8 +243,8 @@ class ManagedConnectionMap  {
 
   std::string ToString(const Endpoint &ep);
   void ManagedConnectionReqCallback(
-      const uint32_t &transport_condition, const Endpoint &endpoint,
-      const std::string& reference_id, TransportPtr transport,
+      const uint32_t &/*transport_condition*/, const Endpoint &endpoint,
+      const std::string& reference_id, RudpTransportPtr transport,
       CreateConnectionFunctor callback);
   /** Handle connection error, mark corresponding connection to be DOWN */
   void DoOnConnectionError(const TransportCondition &error,
@@ -289,3 +292,5 @@ class ManagedConnectionMap  {
 }  // namespace transport
 
 }  // namespace maidsafe
+
+#endif  // MAIDSAFE_TRANSPORT_MANAGED_CONNECTION_H_

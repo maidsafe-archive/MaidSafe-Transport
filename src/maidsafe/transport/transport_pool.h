@@ -25,6 +25,10 @@ TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
+
+#ifndef MAIDSAFE_TRANSPORT_TRANSPORT_POOL_H_
+#define MAIDSAFE_TRANSPORT_TRANSPORT_POOL_H_
+
 #include "maidsafe/transport/transport.h"
 
 namespace maidsafe  {
@@ -55,3 +59,5 @@ class TransportPool  {
 }  // namespace transport
 
 }  // namespace maidsafe
+
+#endif  // MAIDSAFE_TRANSPORT_TRANSPORT_POOL_H_

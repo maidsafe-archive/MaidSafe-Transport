@@ -79,27 +79,12 @@ enum MessageType {
 namespace protobuf {
 class Endpoint;
 class WrapperMessage;
-class ManagedEndpointMessage;
-class ManagedConnectionInfoRequest;
-class ManagedConnectionInfoResponse;
-class ManagedConnectionRequest;
-class ManagedConnectionResponse;
-class NatDetectionRequest;
-class NatDetectionResponse;
-class ProxyConnectRequest;
-class ProxyConnectResponse;
-class ForwardRendezvousRequest;
-class ForwardRendezvousResponse;
-class RendezvousRequest;
-class RendezvousAcknowledgement;
+
 }  // namespace protobuf
 
 namespace test {
-class TransportMessageHandlerTest_BEH_WrapMessageNatDetectionResponse_Test;
-class TransportMessageHandlerTest_BEH_WrapMessageProxyConnectResponse_Test;
-class TransportMessageHandlerTest_BEH_WrapMessageForwardRendezvousResponse_Test;
-class TransportMessageHandlerTest_BEH_WrapMessageRendezvousAcknowledgement_Test;
 class TransportMessageHandlerTest_BEH_MakeSerialisedWrapperMessage_Test;
+class RudpMessageHandlerTest_BEH_MakeSerialisedWrapperMessage_Test;
 }  // namespace test
 
 // Highest possible message type ID, use as offset for type extensions.
@@ -107,76 +92,12 @@ const int kMaxMessageType(1000);
 
 class MessageHandler {
  public:
-  typedef std::shared_ptr<
-      bs2::signal<void(const protobuf::ManagedEndpointMessage&,
-                       protobuf::ManagedEndpointMessage*,
-                       transport::Timeout*)>> ManagedEndpointMsgSigPtr;
-  typedef std::shared_ptr<bs2::signal<
-      void(const transport::Info&,
-           const protobuf::ManagedConnectionInfoRequest&,
-           protobuf::ManagedConnectionInfoResponse*,
-           transport::Timeout*)>> ManagedConnectionInfoReqSigPtr;
-  typedef std::shared_ptr<bs2::signal<
-      void(const transport::Info&,
-           const protobuf::ManagedConnectionInfoResponse&)>>
-               ManagedConnectionInfoRspSigPtr;
-  typedef std::shared_ptr<bs2::signal<
-      void(const transport::Info&,
-           const protobuf::ManagedConnectionRequest&,
-           protobuf::ManagedConnectionResponse*,
-           transport::Timeout*)>> ManagedConnectionReqSigPtr;
-  typedef std::shared_ptr<bs2::signal<
-      void(const transport::Info&,
-           const protobuf::ManagedConnectionResponse&,
-           transport::Timeout*)>> ManagedConnectionRspSigPtr;
-  typedef std::shared_ptr<
-      bs2::signal<void(const protobuf::NatDetectionRequest&,
-                       protobuf::NatDetectionResponse*,
-                       transport::Timeout*)>> NatDetectionReqSigPtr;
-  typedef std::shared_ptr<
-      bs2::signal<void(const protobuf::NatDetectionResponse&)>>
-          NatDetectionRspSigPtr;
-  typedef std::shared_ptr<
-      bs2::signal<void(const protobuf::ProxyConnectRequest&,
-                       protobuf::ProxyConnectResponse*,
-                       transport::Timeout*)>> ProxyConnectReqSigPtr;
-  typedef std::shared_ptr<
-      bs2::signal<void(const protobuf::ProxyConnectResponse&)>>
-          ProxyConnectRspSigPtr;
-  typedef std::shared_ptr<
-      bs2::signal<void(const protobuf::ForwardRendezvousRequest&,
-                       protobuf::ForwardRendezvousResponse*,
-                       transport::Timeout*)>> ForwardRendezvousReqSigPtr;
-  typedef std::shared_ptr<
-      bs2::signal<void(const protobuf::ForwardRendezvousResponse&)>>
-          ForwardRendezvousRspSigPtr;
-  typedef std::shared_ptr<
-      bs2::signal<void(const protobuf::RendezvousRequest&)>>
-          RendezvousReqSigPtr;
-  typedef std::shared_ptr<
-      bs2::signal<void(const protobuf::RendezvousAcknowledgement&)>>
-          RendezvousAckSigPtr;
   typedef std::shared_ptr<bs2::signal<void(const TransportCondition&,
                                            const Endpoint&)>>
           ErrorSigPtr;
 
   explicit MessageHandler(PrivateKeyPtr private_key)
     : private_key_(private_key),
-      on_managed_endpoint_message_(new ManagedEndpointMsgSigPtr::element_type),
-      on_managed_connection_info_request_(new ManagedConnectionInfoReqSigPtr::element_type),  //NOLINT
-      on_managed_connection_info_response_(new ManagedConnectionInfoRspSigPtr::element_type),  //NOLINT
-      on_managed_connection_request_(new ManagedConnectionReqSigPtr::element_type),  //NOLINT
-      on_managed_connection_response_(new ManagedConnectionRspSigPtr::element_type),  //NOLINT
-      on_nat_detection_request_(new NatDetectionReqSigPtr::element_type),
-      on_nat_detection_response_(new NatDetectionRspSigPtr::element_type),
-      on_proxy_connect_request_(new ProxyConnectReqSigPtr::element_type),
-      on_proxy_connect_response_(new ProxyConnectRspSigPtr::element_type),
-      on_forward_rendezvous_request_(
-          new ForwardRendezvousReqSigPtr::element_type),
-      on_forward_rendezvous_response_(
-          new ForwardRendezvousRspSigPtr::element_type),
-      on_rendezvous_request_(new RendezvousReqSigPtr::element_type),
-      on_rendezvous_acknowledgement_(new RendezvousAckSigPtr::element_type),
       on_error_(new ErrorSigPtr::element_type) {}
   virtual ~MessageHandler() {}
 
@@ -187,55 +108,6 @@ class MessageHandler {
   void OnError(const TransportCondition &transport_condition,
                const Endpoint &remote_endpoint);
 
-  std::string WrapMessage(const protobuf::ManagedEndpointMessage &msg);
-  std::string WrapMessage(const protobuf::ManagedConnectionInfoRequest &msg);
-  std::string WrapMessage(const protobuf::ManagedConnectionInfoResponse &msg);
-  std::string WrapMessage(const protobuf::ManagedConnectionRequest &msg);
-  std::string WrapMessage(const protobuf::ManagedConnectionResponse &msg);
-  std::string WrapMessage(const protobuf::NatDetectionRequest &msg);
-  std::string WrapMessage(const protobuf::ProxyConnectRequest &msg);
-  std::string WrapMessage(const protobuf::ForwardRendezvousRequest &msg);
-  std::string WrapMessage(const protobuf::RendezvousRequest &msg);
-
-  ManagedEndpointMsgSigPtr on_managed_endpoint_message() {
-    return on_managed_endpoint_message_;
-  }
-  ManagedConnectionInfoReqSigPtr on_managed_connection_info_request() {
-    return on_managed_connection_info_request_;
-  }
-  ManagedConnectionInfoRspSigPtr on_managed_connection_info_response() {
-    return on_managed_connection_info_response_;
-  }
-  ManagedConnectionReqSigPtr on_managed_connection_request() {
-    return on_managed_connection_request_;
-  }
-  ManagedConnectionRspSigPtr on_managed_connection_response() {
-    return on_managed_connection_response_;
-  }
-  NatDetectionReqSigPtr on_nat_detection_request() {
-    return on_nat_detection_request_;
-  }
-  NatDetectionRspSigPtr on_nat_detection_response() {
-    return on_nat_detection_response_;
-  }
-  ProxyConnectReqSigPtr on_proxy_connect_request() {
-    return on_proxy_connect_request_;
-  }
-  ProxyConnectRspSigPtr on_proxy_connect_response() {
-    return on_proxy_connect_response_;
-  }
-  ForwardRendezvousReqSigPtr on_forward_rendezvous_request() {
-    return on_forward_rendezvous_request_;
-  }
-  ForwardRendezvousRspSigPtr on_forward_rendezvous_response() {
-    return on_forward_rendezvous_response_;
-  }
-  RendezvousReqSigPtr on_rendezvous_request() {
-    return on_rendezvous_request_;
-  }
-  RendezvousAckSigPtr on_rendezvous_acknowledgement() {
-    return on_rendezvous_acknowledgement_;
-  }
   ErrorSigPtr on_error() { return on_error_; }
 
  protected:
@@ -254,33 +126,11 @@ class MessageHandler {
   PrivateKeyPtr private_key_;
 
  private:
-  friend class test::TransportMessageHandlerTest_BEH_WrapMessageNatDetectionResponse_Test;  // NOLINT
-  friend class test::TransportMessageHandlerTest_BEH_WrapMessageProxyConnectResponse_Test;  // NOLINT
-  friend class test::TransportMessageHandlerTest_BEH_WrapMessageForwardRendezvousResponse_Test;  // NOLINT
-  friend class test::TransportMessageHandlerTest_BEH_WrapMessageRendezvousAcknowledgement_Test;  // NOLINT
   friend class test::TransportMessageHandlerTest_BEH_MakeSerialisedWrapperMessage_Test;  // NOLINT
-
+  friend class test::RudpMessageHandlerTest_BEH_MakeSerialisedWrapperMessage_Test;  // NOLINT
   MessageHandler(const MessageHandler&);
   MessageHandler& operator=(const MessageHandler&);
 
-  std::string WrapMessage(const protobuf::NatDetectionResponse &msg);
-  std::string WrapMessage(const protobuf::ProxyConnectResponse &msg);
-  std::string WrapMessage(const protobuf::ForwardRendezvousResponse &msg);
-  std::string WrapMessage(const protobuf::RendezvousAcknowledgement &msg);
-
-  ManagedEndpointMsgSigPtr on_managed_endpoint_message_;
-  ManagedConnectionInfoReqSigPtr on_managed_connection_info_request_;
-  ManagedConnectionInfoRspSigPtr on_managed_connection_info_response_;
-  ManagedConnectionReqSigPtr on_managed_connection_request_;
-  ManagedConnectionRspSigPtr on_managed_connection_response_;
-  NatDetectionReqSigPtr on_nat_detection_request_;
-  NatDetectionRspSigPtr on_nat_detection_response_;
-  ProxyConnectReqSigPtr on_proxy_connect_request_;
-  ProxyConnectRspSigPtr on_proxy_connect_response_;
-  ForwardRendezvousReqSigPtr on_forward_rendezvous_request_;
-  ForwardRendezvousRspSigPtr on_forward_rendezvous_response_;
-  RendezvousReqSigPtr on_rendezvous_request_;
-  RendezvousAckSigPtr on_rendezvous_acknowledgement_;
   ErrorSigPtr on_error_;
 };
 

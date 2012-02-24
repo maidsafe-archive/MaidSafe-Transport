@@ -64,8 +64,11 @@ typedef uint16_t Port;
 typedef int32_t DataSize;
 typedef bptime::time_duration Timeout;
 
+class Contact;
 class MessageHandler;
 class Service;
+class NatDetection;
+
 
 enum TransportType {
   kTCP,
@@ -107,6 +110,7 @@ enum TransportCondition {
   kSetOptionFailure = -350030,
   kMessageSizeTooLarge = -350031,
   kWrongIpVersion = -350032,
+  kPendingResult = -350033,
   kTransportConditionLimit = -359999
 };
 
@@ -182,6 +186,11 @@ typedef std::shared_ptr<bs2::signal<void(const std::string&,
 typedef std::shared_ptr<bs2::signal<void(const TransportCondition&,
                                          const Endpoint&)>> OnError;
 
+namespace test {
+  class MockNatDetectionServiceTest_BEH_FullConeDetection_Test;
+  class MockNatDetectionServiceTest_BEH_PortRestrictedDetection_Test;
+}  // namespace test
+
 // Base class for all transport types.
 class Transport {
  public:
@@ -199,7 +208,7 @@ class Transport {
    * @return Success or an appropriate error code.
    */
   virtual TransportCondition Bootstrap(
-      const std::vector<Endpoint> &candidates) = 0;
+      const std::vector<Contact> &candidates) = 0;
   /**
    * Stops the transport from accepting incoming communication.
    */
@@ -227,6 +236,12 @@ class Transport {
   TransportDetails transport_details() const { return transport_details_; }
   int bootstrap_status() { return bootstrap_status_; }
 //  std::shared_ptr<Service> transport_service() { return transport_service_; }
+
+  friend class test::MockNatDetectionServiceTest_BEH_FullConeDetection_Test;
+  friend class
+      test::MockNatDetectionServiceTest_BEH_PortRestrictedDetection_Test;
+  friend class NatDetection;
+  friend class NatDetectionService;
 
  protected:
   /**
@@ -258,6 +273,8 @@ class Transport {
   Transport(const Transport&);
   Transport& operator=(const Transport&);
 };
+
+typedef std::shared_ptr<Transport> TransportPtr;
 
 }  // namespace transport
 

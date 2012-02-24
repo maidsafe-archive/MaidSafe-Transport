@@ -32,16 +32,19 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <string>
 #include <vector>
 #include <utility>
-//#include "gtest/gtest-param-test.h"
+
+#include "boost/thread/condition_variable.hpp"
 #include "boost/thread/mutex.hpp"
 #include "boost/thread/thread.hpp"
 #include "maidsafe/common/test.h"
 #include "maidsafe/transport/transport.h"
 #include "maidsafe/transport/tcp_transport.h"
-#include "maidsafe/transport/rudp/rudp_transport.h"
+#include "maidsafe/transport/rudp_transport.h"
 #include "maidsafe/transport/udp_transport.h"
 
 namespace maidsafe {
+
+class AsioService;
 
 namespace transport {
 
@@ -51,8 +54,6 @@ class TestMessageHandler;
 
 static const IP kIP(boost::asio::ip::address_v4::loopback());
 static const uint16_t kThreadGroupSize = 8;
-typedef boost::asio::io_service AsioService;
-typedef std::shared_ptr<boost::asio::io_service::work> WorkPtr;
 typedef std::shared_ptr<Transport> TransportPtr;
 typedef boost::shared_ptr<TestMessageHandler> TestMessageHandlerPtr;
 typedef std::vector<std::string> Messages;
@@ -81,12 +82,15 @@ class TestMessageHandler {
                             Timeout *timeout);
   void DoOnError(const TransportCondition &tc);
   void ClearContainers();
+  void ConnectCallback(const int &in_result, int *out_result,
+                       boost::condition_variable* condition);
   IncomingMessages requests_received();
   IncomingMessages responses_received();
   OutgoingResponses responses_sent();
   Results results();
   bool finished_;
- private:
+
+  private:
   TestMessageHandler(const TestMessageHandler&);
   TestMessageHandler& operator=(const TestMessageHandler&);
   std::string this_id_;
@@ -101,28 +105,25 @@ template <typename T>
 class TransportAPI {
  public:
   TransportAPI();
-  virtual ~TransportAPI();
+  ~TransportAPI();
+
  protected:
   // Create a transport and an io_service listening on the given or random port
   // (if zero) if listen == true.  If not, only a transport is created, and the
   // test member asio_service_ is used.
   void SetupTransport(bool listen, Port lport);
-  void RunTransportTest(const int &num_messages,
+  void RunTransportTest(const uint16_t &num_messages,
                         const int &messages_length = 4);
   void SendRPC(TransportPtr sender_pt, TransportPtr listener_pt,
                int &messages_length);
   void CheckMessages();
+  void StopAsioServices();
 
-  AsioService asio_service_, asio_service_1_, asio_service_2_, asio_service_3_;
-  WorkPtr work_, work_1_, work_2_, work_3_;
+  std::vector<std::shared_ptr<AsioService>> asio_services_;
   std::vector<TransportPtr> listening_transports_;
   std::vector<TestMessageHandlerPtr> listening_message_handlers_;
   std::vector<TransportPtr> sending_transports_;
   std::vector<TestMessageHandlerPtr> sending_message_handlers_;
-  boost::thread_group thread_group_;
-  boost::thread_group thread_group_1_;
-  boost::thread_group thread_group_2_;
-  boost::thread_group thread_group_3_;
   boost::mutex mutex_;
   std::vector<std::string> request_messages_;
   uint16_t count_;
@@ -145,16 +146,16 @@ class RUDPConfigurableTransportAPITest
       public ::testing::TestWithParam<int> {
  public:
   RUDPConfigurableTransportAPITest() : TransportAPI<RudpTransport>() {
-    int configurations[3][6] = {{ 16,  128, 1400, 6400, 1024, 6000 },
-                                { 64,  256, 1400, 1400, 1024, 1024 },
-                                { 32,   64, 2800, 4800, 2038, 4076 }};
+    int configurations[3][6] = { { 16,  128, 1400, 6400, 1024, 6000 },
+                                 { 64,  256, 1400, 1400, 1024, 1024 },
+                                 { 32,   64, 2800, 4800, 2038, 4076 }};
     int config_selected = GetParam();
-    RudpParameters::kDefaultWindowSize = configurations[config_selected][0];
-    RudpParameters::kMaximumWindowSize = configurations[config_selected][1];
-    RudpParameters::kDefaultSize = configurations[config_selected][2];
-    RudpParameters::kMaxSize = configurations[config_selected][3];
-    RudpParameters::kDefaultDataSize = configurations[config_selected][4];
-    RudpParameters::kMaxDataSize = configurations[config_selected][5];
+    RudpParameters::default_window_size = configurations[config_selected][0];
+    RudpParameters::maximum_window_size = configurations[config_selected][1];
+    RudpParameters::default_size = configurations[config_selected][2];
+    RudpParameters::max_size = configurations[config_selected][3];
+    RudpParameters::default_data_size = configurations[config_selected][4];
+    RudpParameters::max_data_size = configurations[config_selected][5];
   }
 };
 

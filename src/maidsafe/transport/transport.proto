@@ -5,6 +5,24 @@ message Endpoint {
   required int32 port = 2;
 }
 
+message Contact {
+  optional Endpoint endpoint = 1;
+  repeated bytes local_ips = 2;
+  optional int32 local_port = 3;
+  optional Endpoint rendezvous = 4;
+  optional bool tcp443 = 5;
+  optional bool tcp80 = 6;
+  optional bool prefer_local = 7;
+}
+
+message ConnectRequest {
+  required bool rendezvous = 1;
+}
+
+message ConnectResponse {
+  required bool rendezvous = 1;
+}
+
 message WrapperMessage {
   required int32 msg_type = 1;
   required bytes payload = 2;
@@ -52,6 +70,7 @@ message NatDetectionResponse {
 message ProxyConnectRequest {
   required Endpoint endpoint = 1;
   required bool rendezvous_connect = 2;
+  optional Endpoint rendezvous = 3;
 }
 
 message ProxyConnectResponse {
@@ -67,7 +86,7 @@ message ForwardRendezvousResponse {
 }
 
 message RendezvousRequest {
-  required Endpoint originator_endpoint = 1;
+  required Endpoint proxy_endpoint = 1;
 }
 
 message RendezvousAcknowledgement {
