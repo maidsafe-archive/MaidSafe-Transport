@@ -80,6 +80,8 @@ void NatDetectionService::NatDetection(
     const protobuf::NatDetectionRequest &request,
     protobuf::NatDetectionResponse *nat_detection_response,
     Timeout* timeout) {
+  std::cout << "NatDetectionService::NatDetection" << std::endl;
+  std::cout << info.endpoint.ip.to_string() << ", " << info.endpoint.port << std::endl;  
   if (!request.full_detection()) {  // Partial NAT detection
     if (DirectlyConnected(request, info.endpoint))
       SetNatDetectionResponse(nat_detection_response, info.endpoint,
@@ -90,6 +92,7 @@ void NatDetectionService::NatDetection(
     return;
   } else {  // Full nat detection
     // Directly Connected check
+    std::cout <<  "Directly Connected check " << std::endl;
     if (DirectlyConnected(request, info.endpoint)) {
       SetNatDetectionResponse(nat_detection_response, info.endpoint,
                               kDirectConnected);
@@ -136,7 +139,6 @@ void NatDetectionService::NatDetection(
       *timeout = kDefaultInitialTimeout;
       return;
     }
-    // message_handler_->on_proxy_connect_response()->disconnect();
     // Port restricted check
     proxy_connect.disconnect();
     error.disconnect();
@@ -148,15 +150,20 @@ void NatDetectionService::NatDetection(
 bool NatDetectionService::DirectlyConnected(
     const protobuf::NatDetectionRequest &request,
     const Endpoint &endpoint) {
+  std::cout << "NatDetectionService::DirectlyConnected" << std::endl;
   for (int i = 0; i < request.local_ips_size(); ++i)
-    if (endpoint.ip.to_string() == request.local_ips(i))
+    if (endpoint.ip.to_string() == request.local_ips(i)) {
+      std::cout << "NatDetectionService::DirectlyConnected true" << false << std::endl;      
       return true;
+    }
+  std::cout << "NatDetectionService::DirectlyConnected false" << false << std::endl;
   return false;
 }
 
 void NatDetectionService::SetNatDetectionResponse(
     protobuf::NatDetectionResponse *nat_detection_response,
     const Endpoint &endpoint, const NatType &nat_type) {
+  std::cout << "NatDetectionService::SetNatDetectionResponse" << std::endl;
   nat_detection_response->mutable_endpoint()->set_ip(endpoint.ip.to_string());
   nat_detection_response->mutable_endpoint()->set_port(endpoint.port);
   nat_detection_response->set_nat_type(nat_type);
@@ -167,6 +174,7 @@ void NatDetectionService::SendProxyConnectRequest(const Endpoint &originator,
                                                   const Endpoint &proxy,
                                                   const bool &rendezvous,
                                                   TransportPtr transport) {
+  std::cout << "NatDetectionService::SendProxyConnectRequest" << std::endl;  
   protobuf::ProxyConnectRequest request;
   request.set_rendezvous_connect(rendezvous);
   request.mutable_endpoint()->set_ip(originator.ip.to_string());
@@ -176,7 +184,7 @@ void NatDetectionService::SendProxyConnectRequest(const Endpoint &originator,
   request.mutable_rendezvous()->set_port(
       listening_transport_->transport_details().endpoint.port);
   std::string message = message_handler_->WrapMessage(request);
-  transport->Send(message, proxy, kDefaultInitialTimeout);
+  transport->Send(message, proxy, kDefaultInitialTimeout*4);
 }
 
 void NatDetectionService::ProxyConnectResponse(
@@ -187,10 +195,13 @@ void NatDetectionService::ProxyConnectResponse(
     boost::condition_variable *condition_variable,
     TransportCondition *condition,
     bool *result) {
+  std::cout << "NatDetectionService::ProxyConnectResponse" << std::endl;  
   if (remote_endpoint.ip == peer.ip) {  // port?
     *result = response.result();
     *condition = transport_condition;
     condition_variable->notify_one();
+  } else {
+    std::cout << "NatDetectionService::ProxyConnectResponse Errror" << std::endl;      
   }
 }
 
@@ -200,14 +211,17 @@ void NatDetectionService::ProxyConnect(
     const protobuf::ProxyConnectRequest &request,
     protobuf::ProxyConnectResponse *response,
     Timeout*) {
+  std::cout << "NatDetectionService::ProxyConnect" << std::endl;  
   // validate info ?
   Endpoint endpoint(request.endpoint().ip(),
                     static_cast<uint16_t> (request.endpoint().port()));
   response->set_result(false);
   std::shared_ptr<RudpTransport> transport(
       std::make_shared<RudpTransport>(asio_service_));
-  // TODO(Mahmoud): The IP address should be changed.
-  Endpoint listening_endpoint(IP::from_string("127.0.0.1"), 0);
+  // The IP below may fail to listen if the endpoint.ip is different from
+  // local_endpoint. The external endpoint may be mapped to an internal endpoint
+  Endpoint listening_endpoint(
+      listening_transport_->transport_details().endpoint.ip, 0);
   if (!StartListening(transport, &listening_endpoint)) {
     (*listening_transport_->on_error_)(kListenError, listening_endpoint);
     return;
@@ -247,6 +261,7 @@ void NatDetectionService::ProxyConnect(
 
 bool NatDetectionService::StartListening(RudpTransportPtr transport,
     Endpoint* endpoint) {
+  std::cout << "NatDetectionService::StartListening" << std::endl;  
   TransportCondition condition(kError);
   size_t max_try(10), attempt(0);
   while (attempt++ < max_try && (condition != kSuccess)) {
@@ -257,6 +272,7 @@ bool NatDetectionService::StartListening(RudpTransportPtr transport,
 }
 
 Endpoint NatDetectionService::GetDirectlyConnectedEndpoint() {
+  std::cout << "NatDetectionService::GetDirectlyConnectedEndpoint" << std::endl;  
   if (get_directly_connected_endpoint_)
     return get_directly_connected_endpoint_();
   else
@@ -268,6 +284,7 @@ void NatDetectionService::ConnectResult(const int &in_result,
                                         int *out_result,
                                         boost::mutex *mutex,
                                         boost::condition_variable *condition) {
+  std::cout << "NatDetectionService::ConnectResult" << std::endl;  
   boost::mutex::scoped_lock lock(*mutex);
   *out_result = in_result;
   condition->notify_one();
@@ -278,6 +295,7 @@ void NatDetectionService::SendForwardRendezvousRequest(
     const Endpoint &rendezvous,
     const Endpoint &originator,
     TransportPtr transport) {
+  std::cout << "NatDetectionService::SendForwardRendezvousRequest" << std::endl;  
   protobuf::ForwardRendezvousRequest request;
   request.mutable_receiver_endpoint()->set_ip(originator.ip.to_string());
   request.mutable_receiver_endpoint()->set_port(originator.port);
@@ -288,6 +306,7 @@ void NatDetectionService::SendForwardRendezvousRequest(
 // Proxy to originator
 void NatDetectionService::SendNatDetectionResponse(const Endpoint &originator,
                                                    TransportPtr transport) {
+  std::cout << "NatDetectionService::SendNatDetectionResponse" << std::endl;  
   protobuf::NatDetectionResponse response;
   SetNatDetectionResponse(&response, originator, kPortRestricted);
   std::string message(message_handler_->WrapMessage(response));
@@ -297,6 +316,7 @@ void NatDetectionService::SendNatDetectionResponse(const Endpoint &originator,
 void NatDetectionService::SetRendezvousRequest(
     protobuf::RendezvousRequest *rendezvous_request,
     const Endpoint &proxy) {
+  std::cout << "NatDetectionService::SetRendezvousRequest" << std::endl;  
   rendezvous_request->mutable_proxy_endpoint()->set_ip(proxy.ip.to_string());
   rendezvous_request->mutable_proxy_endpoint()->set_port(proxy.port);
 }
@@ -306,6 +326,7 @@ void NatDetectionService::ForwardRendezvous(
     const Info &info,
     const protobuf::ForwardRendezvousRequest& request,
     protobuf::ForwardRendezvousResponse*) {
+  std::cout << "NatDetectionService::ForwardRendezvous" << std::endl;  
   protobuf::RendezvousRequest rendezvous_request;
   SetRendezvousRequest(&rendezvous_request, info.endpoint);
 
@@ -321,6 +342,7 @@ void NatDetectionService::ForwardRendezvous(
 void NatDetectionService::Rendezvous(const Info & /*info*/,
                                      const protobuf::RendezvousRequest& request,
                                      protobuf::RendezvousAcknowledgement*) {
+  std::cout << "NatDetectionService::Rendezvous" << std::endl;  
   // TODO(Prakash): validate info if request is sent from rendezvous node
   Endpoint proxy(request.proxy_endpoint().ip(),
       static_cast<uint16_t> (request.proxy_endpoint().port()));
@@ -334,6 +356,7 @@ void NatDetectionService::Rendezvous(const Info & /*info*/,
 //  At originator
 void NatDetectionService::OriginConnectResult(const TransportCondition &result,
                                          const Endpoint &endpoint) {
+  std::cout << "NatDetectionService::OriginConnectResult" << std::endl;  
   if (result != kSuccess) {
     (*listening_transport_->on_error_)(result, endpoint);
   }

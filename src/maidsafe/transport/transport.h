@@ -172,6 +172,7 @@ typedef std::shared_ptr<bs2::signal<void(const TransportCondition&,
                                          const Endpoint&)>> OnError;
 
 namespace test {
+  class MockNatDetectionServiceTest_FUN_NatTypeDetection_Test;
   class MockNatDetectionServiceTest_BEH_FullConeDetection_Test;
   class MockNatDetectionServiceTest_BEH_PortRestrictedDetection_Test;
 }  // namespace test
@@ -224,6 +225,7 @@ class Transport {
   friend class test::MockNatDetectionServiceTest_BEH_FullConeDetection_Test;
   friend class
       test::MockNatDetectionServiceTest_BEH_PortRestrictedDetection_Test;
+  friend class test::MockNatDetectionServiceTest_FUN_NatTypeDetection_Test;
   friend class NatDetection;
   friend class NatDetectionService;
 

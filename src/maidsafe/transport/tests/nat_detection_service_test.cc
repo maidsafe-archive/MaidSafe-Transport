@@ -38,6 +38,7 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "maidsafe/transport/rudp_message_handler.h"
 #include "maidsafe/transport/transport_pb.h"
 #include "maidsafe/transport/nat_detection.h"
+#include <maidsafe/transport/utils.h>
 
 namespace args = std::placeholders;
 
@@ -51,11 +52,12 @@ class MockNatDetectionServiceTest;
 class Node {
  public:
   Node() : asio_service_(),
-           endpoint_(IP::from_string("127.0.0.1"), 0),
+           endpoint_(GetLocalAddresses().at(0), 0),
            live_contact_(IP::from_string("127.0.0.1"), 0),
            transport_(new transport::RudpTransport(asio_service_.service())),
            message_handler_(new RudpMessageHandler(nullptr)) {
     asio_service_.Start(5);
+//    endpoint_.ip = GetLocalAddresses().at(0);
   }
 
   ~Node() {
@@ -262,6 +264,66 @@ TEST_F(MockNatDetectionServiceTest, BEH_PortRestrictedDetection) {
                        origin_->message_handler(), &nattype,
                        &rendezvous_endpoint);
   EXPECT_EQ(nattype, kPortRestricted);
+}
+
+TEST_F(MockNatDetectionServiceTest, FUN_SetUpRendezvousAndProxy) {
+  NatDetection nat_detection;
+  std::shared_ptr<NatDetectionService> rendezvous_service, proxy_service;
+  bool listens = rendezvous_->StartListening();
+  std::cout << "Rendezvous IP: " << rendezvous_->endpoint().ip.to_string() << 
+      "Port: " << rendezvous_->endpoint().port << std::endl;
+  ConnectToSignals(rendezvous_->transport(), rendezvous_->message_handler());
+  listens =  proxy_->StartListening();
+  EXPECT_TRUE(listens);
+  rendezvous_->set_live_contact(proxy_->endpoint());
+  ConnectToSignals(proxy_->transport(), proxy_->message_handler());
+  rendezvous_service.reset(
+      new NatDetectionService(rendezvous_->io_service(),
+                              rendezvous_->message_handler(),
+                              rendezvous_->transport(),
+                              std::bind(&Node::live_contact, rendezvous_)));
+  rendezvous_service->ConnectToSignals();
+  proxy_service.reset(
+      new NatDetectionService(proxy_->io_service(),
+                              proxy_->message_handler(),
+                              proxy_->transport(),
+                              std::bind(&Node::live_contact, proxy_)));
+  proxy_service->ConnectToSignals();
+  boost::this_thread::sleep(boost::posix_time::hours(1));
+}
+
+TEST_F(MockNatDetectionServiceTest, FUN_NatTypeDetection) {
+  NatDetection nat_detection;
+  std::shared_ptr<NatDetectionService> origin_service;
+  std::vector<Contact> contacts;
+  std::vector<Endpoint> endpoints;
+  Endpoint rendezvous_endpoint;
+  rendezvous_endpoint.ip = IP::from_string("96.126.103.209");
+//  rendezvous_endpoint.ip = GetLocalAddresses().at(0);
+//  rendezvous_endpoint.port = 15573;
+  std::cin >> rendezvous_endpoint.port;
+  bool listens = origin_->StartListening();
+  EXPECT_TRUE(listens);
+  origin_->transport()->transport_details_.local_endpoints.push_back(
+      origin_->endpoint());
+  ConnectToSignals(origin_->transport(), origin_->message_handler());
+  origin_->set_live_contact(rendezvous_endpoint);
+  origin_service.reset(
+      new NatDetectionService(origin_->io_service(),
+                                  origin_->message_handler(),
+                                  origin_->transport(),
+                                  std::bind(&Node::live_contact, origin_)));
+  origin_service->ConnectToSignals();
+  NatType nattype;
+  Endpoint out_rendezvous_endpoint;
+  endpoints.push_back(rendezvous_endpoint);
+  Contact rendezvous_contact(rendezvous_endpoint, endpoints,
+                             Endpoint(), true, true);
+  contacts.push_back(rendezvous_contact);
+  nat_detection.Detect(contacts, true, origin_->transport(),
+                       origin_->message_handler(), &nattype,
+                       &out_rendezvous_endpoint);
+  std::cout << "Nat type is: " << nattype << std::endl;
 }
 
 class NatDetectionServicesTest : public testing::Test {
