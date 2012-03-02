@@ -78,7 +78,7 @@ void NatDetectionRpcs::DoNatDetection(const std::vector<Contact> &candidates,
                 transport, message_handler, request, full, index));
   std::cout << candidates[index].endpoint().ip << ", " << candidates[index].endpoint().port << std::endl;
   transport->Send(request, candidates[index].endpoint(),
-                   transport::kDefaultInitialTimeout*4);
+                   transport::kDefaultInitialTimeout*2);
 }
 
 void NatDetectionRpcs::KeepAlive(const Endpoint endpoint,
@@ -102,6 +102,7 @@ void NatDetectionRpcs::NatDetectionCallback(const TransportCondition &result,
                                 const std::string &request,
                                 const bool &full,
                                 const size_t &index) {
+  std::cout << "NatDetectionRpcs::NatDetectionCallback: " << result << std::endl;
   TransportDetails transport_details;
   if (result == kSuccess) {
     transport_details.endpoint.ip.from_string(response.endpoint().ip().data());
@@ -109,13 +110,12 @@ void NatDetectionRpcs::NatDetectionCallback(const TransportCondition &result,
         static_cast<Port>(response.endpoint().port());
     transport_details.rendezvous_endpoint = candidates[index].endpoint();
     callback(response.nat_type(), transport_details);
-  }
-  if (result != kSuccess) {
+  } else {
     if (index + 1 < candidates.size()) {
       DoNatDetection(candidates, transport, message_handler, request, full,
                      callback, index + 1);
     } else {
-      callback(kError, transport_details);
+      callback(result, transport_details);
     }
   }
 }

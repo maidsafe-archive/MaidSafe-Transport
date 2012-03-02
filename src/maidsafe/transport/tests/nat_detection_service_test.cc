@@ -38,7 +38,7 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "maidsafe/transport/rudp_message_handler.h"
 #include "maidsafe/transport/transport_pb.h"
 #include "maidsafe/transport/nat_detection.h"
-#include <maidsafe/transport/utils.h>
+#include "maidsafe/transport/utils.h"
 
 namespace args = std::placeholders;
 
@@ -300,7 +300,7 @@ TEST_F(MockNatDetectionServiceTest, FUN_NatTypeDetection) {
   Endpoint rendezvous_endpoint;
   rendezvous_endpoint.ip = IP::from_string("96.126.103.209");
 //  rendezvous_endpoint.ip = GetLocalAddresses().at(0);
-//  rendezvous_endpoint.port = 15573;
+//  rendezvous_endpoint.port = 2507;
   std::cin >> rendezvous_endpoint.port;
   bool listens = origin_->StartListening();
   EXPECT_TRUE(listens);

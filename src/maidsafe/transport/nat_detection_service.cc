@@ -218,8 +218,6 @@ void NatDetectionService::ProxyConnect(
   response->set_result(false);
   std::shared_ptr<RudpTransport> transport(
       std::make_shared<RudpTransport>(asio_service_));
-  // The IP below may fail to listen if the endpoint.ip is different from
-  // local_endpoint. The external endpoint may be mapped to an internal endpoint
   Endpoint listening_endpoint(
       listening_transport_->transport_details().endpoint.ip, 0);
   if (!StartListening(transport, &listening_endpoint)) {
@@ -355,7 +353,7 @@ void NatDetectionService::Rendezvous(const Info & /*info*/,
 
 //  At originator
 void NatDetectionService::OriginConnectResult(const TransportCondition &result,
-                                         const Endpoint &endpoint) {
+                                              const Endpoint &endpoint) {
   std::cout << "NatDetectionService::OriginConnectResult" << std::endl;  
   if (result != kSuccess) {
     (*listening_transport_->on_error_)(result, endpoint);
