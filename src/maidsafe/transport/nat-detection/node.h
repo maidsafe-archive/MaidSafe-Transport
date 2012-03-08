@@ -46,7 +46,7 @@ typedef std::shared_ptr<RudpMessageHandler> RudpMessageHandlerPtr;
 typedef std::shared_ptr<NatDetectionService> NatDetectionServicePtr;
 
 namespace detection {
-
+  
 class Node {
  public:
   Node();
@@ -58,16 +58,17 @@ class Node {
   RudpMessageHandlerPtr message_handler() const;
   boost::asio::io_service& io_service();
   bool SetLiveContacts(const fs::path& bootstrap);
-  
+  int16_t DetectNatType();
+                       
   // Checks whether a node is directly connected
   bool IsDirectlyConnected();
-  void ReadBootstrapFile();
-  void WriteBootstrapFile();  
+  bool ReadBootstrapFile(const fs::path& bootstrap);
+  bool WriteBootstrapFile(const fs::path& bootstrap);
 
  private:
   bool ExternalIpAddress(IP *external_ip);
-  bool ReadContacsFromFile(const fs::path& bootstrap,
-                           std::vector<Contact>* contacts);
+  void ConnectToSignals(RudpTransportPtr transport,
+                        RudpMessageHandlerPtr message_handler);
 
   AsioService asio_service_;
   Endpoint endpoint_;

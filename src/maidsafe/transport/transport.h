@@ -105,6 +105,7 @@ enum TransportCondition {
   kMessageSizeTooLarge = -350031,
   kWrongIpVersion = -350032,
   kPendingResult = -350033,
+  kConnectTimeout = -350034,
   kTransportConditionLimit = -359999
 };
 
@@ -177,6 +178,11 @@ namespace test {
   class MockNatDetectionServiceTest_BEH_PortRestrictedDetection_Test;
 }  // namespace test
 
+namespace detection {
+  class Node;
+} // namespace detection
+
+
 // Base class for all transport types.
 class Transport {
  public:
@@ -228,6 +234,7 @@ class Transport {
   friend class test::MockNatDetectionServiceTest_FUN_NatTypeDetection_Test;
   friend class NatDetection;
   friend class NatDetectionService;
+  friend class detection::Node;
 
  protected:
   /**

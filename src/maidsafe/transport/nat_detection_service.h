@@ -45,7 +45,7 @@ namespace maidsafe {
 namespace transport {
 
 class RudpMessageHandler;
-typedef std::function<Endpoint()> GetEndpointFunctor;
+typedef std::function<Contact()> GetEndpointFunctor;
 typedef std::shared_ptr<Transport> TransportPtr;
 
 typedef bptime::time_duration Timeout;
@@ -132,7 +132,7 @@ class NatDetectionService : public std::enable_shared_from_this<NatDetectionServ
                                const bool &rendezvous,
                                TransportPtr transport);
 
-  Endpoint GetDirectlyConnectedEndpoint();
+  Contact GetDirectlyConnectedContact();
 
   bool StartListening(RudpTransportPtr transport, Endpoint* endpoint);
 

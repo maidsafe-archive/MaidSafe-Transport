@@ -29,6 +29,8 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <string>
 
+#include "boost/asio.hpp"
+
 #include "maidsafe/transport/log.h"
 #include "maidsafe/transport/rudp_transport.h"
 #include "maidsafe/transport/rudp_message_handler.h"
@@ -99,7 +101,7 @@ void NatDetectionService::NatDetection(
       return;
     }
     // Full cone NAT type check
-    Endpoint proxy = GetDirectlyConnectedEndpoint();
+    Endpoint proxy = GetDirectlyConnectedContact().endpoint();
     std::string ipstr(proxy.ip.to_string());
     // Waiting for ProxyConnect Callback to return
     boost::condition_variable condition_variable;
@@ -142,7 +144,7 @@ void NatDetectionService::NatDetection(
     // Port restricted check
     proxy_connect.disconnect();
     error.disconnect();
-    proxy = GetDirectlyConnectedEndpoint();  // new contact
+    proxy = GetDirectlyConnectedContact().endpoint();  // new contact
     SendProxyConnectRequest(info.endpoint, proxy, true, transport);
   }
 }
@@ -185,6 +187,7 @@ void NatDetectionService::SendProxyConnectRequest(const Endpoint &originator,
       listening_transport_->transport_details().endpoint.port);
   std::string message = message_handler_->WrapMessage(request);
   transport->Send(message, proxy, kDefaultInitialTimeout*4);
+  std::cout << "NatDetectionService::SendProxyConnectRequest: " << boost::asio::deadline_timer::traits_type::now().time_of_day() << std::endl;  
 }
 
 void NatDetectionService::ProxyConnectResponse(
@@ -201,7 +204,7 @@ void NatDetectionService::ProxyConnectResponse(
     *condition = transport_condition;
     condition_variable->notify_one();
   } else {
-    std::cout << "NatDetectionService::ProxyConnectResponse Errror" << std::endl;      
+    std::cout << "NatDetectionService::ProxyConnectResponse Errror " << transport_condition << std::endl;      
   }
 }
 
@@ -220,10 +223,10 @@ void NatDetectionService::ProxyConnect(
       std::make_shared<RudpTransport>(asio_service_));
   Endpoint listening_endpoint(
       listening_transport_->transport_details().endpoint.ip, 0);
-  if (!StartListening(transport, &listening_endpoint)) {
-    (*listening_transport_->on_error_)(kListenError, listening_endpoint);
-    return;
-  }
+//   if (!StartListening(transport, &listening_endpoint)) {
+//     (*listening_transport_->on_error_)(kListenError, listening_endpoint);
+//     return;
+//   }
   if (!request.rendezvous_connect()) {  // FullConNatDetection
     int connect_result(kPendingResult);
     boost::condition_variable condition_variable;
@@ -269,12 +272,12 @@ bool NatDetectionService::StartListening(RudpTransportPtr transport,
   return (condition == kSuccess);
 }
 
-Endpoint NatDetectionService::GetDirectlyConnectedEndpoint() {
+Contact NatDetectionService::GetDirectlyConnectedContact() {
   std::cout << "NatDetectionService::GetDirectlyConnectedEndpoint" << std::endl;  
   if (get_directly_connected_endpoint_)
     return get_directly_connected_endpoint_();
   else
-    return Endpoint();
+    return Contact();
 }
 
 
@@ -355,9 +358,9 @@ void NatDetectionService::Rendezvous(const Info & /*info*/,
 void NatDetectionService::OriginConnectResult(const TransportCondition &result,
                                               const Endpoint &endpoint) {
   std::cout << "NatDetectionService::OriginConnectResult" << std::endl;  
-  if (result != kSuccess) {
-    (*listening_transport_->on_error_)(result, endpoint);
-  }
+//   if (result != kSuccess) {
+//     (*listening_transport_->on_error_)(result, endpoint);
+//  }
 }
 
 }  // namespace transport

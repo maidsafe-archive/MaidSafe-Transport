@@ -15,6 +15,10 @@ message Contact {
   optional bool prefer_local = 7;
 }
 
+message BootstrapContacts {
+  repeated Contact contact = 1;
+}
+
 message ConnectRequest {
   required bool rendezvous = 1;
 }

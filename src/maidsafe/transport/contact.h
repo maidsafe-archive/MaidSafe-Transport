@@ -33,8 +33,8 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <string>
 #include <vector>
 
-#include "boost/serialization/nvp.hpp"
-#include "boost/serialization/vector.hpp"
+#include "boost/filesystem.hpp"
+
 #include "maidsafe/transport/transport.h"
 #include "maidsafe/transport/version.h"
 
@@ -44,6 +44,7 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #endif
 
 namespace args = std::placeholders;
+namespace fs = boost::filesystem;
 
 namespace maidsafe {
 
@@ -141,6 +142,12 @@ class Contact {
 };
 
 bool IsValid(const Endpoint &endpoint);
+
+bool WriteContactsToFile(const fs::path &filename,
+                         std::vector<Contact> &contacts);
+
+bool ReadContactsFromFile(const fs::path &filename,
+                          std::vector<Contact> *contacts);
 
 }  // namespace transport
 

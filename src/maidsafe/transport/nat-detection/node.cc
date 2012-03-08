@@ -32,6 +32,7 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "maidsafe/transport/rudp_message_handler.h"
 #include "maidsafe/transport/utils.h"
 #include "maidsafe/transport/upnp/upnp_client.h"
+#include "maidsafe/transport/nat_detection.h"
 #include <glog/log_severity.h>
 
 
@@ -51,12 +52,25 @@ Node::Node()
             message_handler_, transport_,
             std::bind(&Node::live_contact, this))) {
   asio_service_.Start(5);
+  service_->ConnectToSignals();
 }
 
 Node::~Node() {
   transport_->StopListening();
   transport_.reset();
   asio_service_.Stop();
+}
+
+void Node::ConnectToSignals(RudpTransportPtr transport,
+    RudpMessageHandlerPtr message_handler) {
+  transport->on_message_received()->connect(
+  transport::OnMessageReceived::element_type::slot_type(
+      &RudpMessageHandler::OnMessageReceived, message_handler.get(),
+      _1, _2, _3, _4).track_foreign(message_handler));
+  transport->on_error()->connect(
+      transport::OnError::element_type::slot_type(
+          &RudpMessageHandler::OnError,
+          message_handler.get(), _1, _2).track_foreign(message_handler));
 }
 
 bool Node::StartListening() {
@@ -66,6 +80,30 @@ bool Node::StartListening() {
     endpoint_.port = RandomUint32() % (64000 - 1025) + 1025;
     condition = transport_->StartListening(endpoint_);
   }
+  if (condition == kSuccess) {
+    // Create contact_ information for node and set contact for Rpcs
+    transport::Endpoint endpoint;
+    transport_->transport_details_.local_endpoints.clear();
+    std::cout << transport_->transport_details().endpoint.ip.to_string() << std::endl;
+    endpoint.ip = transport_->transport_details().endpoint.ip;
+    endpoint.port = transport_->transport_details().endpoint.port;
+    transport_->transport_details_.local_endpoints.push_back(endpoint);
+    std::cout << endpoint.ip.to_string() << std::endl;
+  }
+  
+  TransportDetails transport_details = transport_->transport_details();
+  for (auto inner_it(transport_details.local_endpoints.begin()); 
+           inner_it !=  transport_details.local_endpoints.end();
+           ++inner_it) {
+          std::cout << inner_it->ip.to_string() << ", " << 
+              (*inner_it).port << std::endl;          
+  }
+  std::cout <<
+      transport_->transport_details().rendezvous_endpoint.ip.to_string() << 
+          ", " << 
+        transport_->transport_details().rendezvous_endpoint.port <<
+        std::endl;
+  ConnectToSignals(transport_, message_handler_);
   return (condition == kSuccess);
 }
 
@@ -74,7 +112,7 @@ Endpoint Node::endpoint() {
 }
 
 Contact Node::live_contact() {
-  return live_contacts_.at(0);
+  return live_contacts_.at(RandomUint32() % live_contacts_.size());
 }
 
 RudpTransportPtr Node::transport() const {
@@ -90,12 +128,20 @@ boost::asio::io_service& Node::io_service() {
 }
 
 bool Node::SetLiveContacts(const fs::path& bootstrap) {
-  return ReadContacsFromFile(bootstrap, &live_contacts_);
-}
-
-bool Node::ReadContacsFromFile(const fs::path& /*bootstrap*/,
-                               std::vector<Contact>* /*contacts*/) {
-  return true;
+  bool result(ReadContactsFromFile(bootstrap, &live_contacts_));
+  for (auto it(live_contacts_.begin()); it != live_contacts_.end(); ++it) {
+    std::cout << (*it).endpoint().ip.to_string() << ", " << 
+        (*it).endpoint().port << std::endl;
+        std::vector<Endpoint> local_endpoints((*it).local_endpoints());
+        for (auto inner_it(local_endpoints.begin()); 
+                 inner_it !=  local_endpoints.end(); ++inner_it) {
+          std::cout << (*inner_it).ip.to_string() << ", " << 
+              (*inner_it).port << std::endl;          
+        }
+    std::cout << (*it).rendezvous_endpoint().ip.to_string() << ", " << 
+        (*it).rendezvous_endpoint().port << std::endl;       
+  }
+  return result;
 }
 
 bool Node::IsDirectlyConnected() {
@@ -104,6 +150,7 @@ bool Node::IsDirectlyConnected() {
   if (!ExternalIpAddress(&external_ip))
     return false;
   for (auto it(local_addresses.begin()); it != local_addresses.end(); ++it) {
+    std::cout << (*it).to_string() << std::endl;
     if (external_ip == (*it)) {
       return true;
     }
@@ -119,9 +166,43 @@ bool Node::ExternalIpAddress(IP *external_ip) {
   std::string ip(upnp_client.GetExternalIpAddress());
   if (ip.empty())
     return false;
-//  DLOG(INFO) << ip;
+  std::cout << ip << std::endl;
   *external_ip = IP::from_string(ip);
   return true;
+}
+
+int16_t Node::DetectNatType() {
+  NatDetection nat_detection;
+  NatType nat_type;
+  Endpoint rendezvous_endpoint;
+  nat_detection.Detect(live_contacts_, true, transport_, message_handler_,
+                       &nat_type, &rendezvous_endpoint);
+  return 0;
+}
+
+bool Node::ReadBootstrapFile(const fs::path& bootstrap) {
+  ReadContactsFromFile(bootstrap, &live_contacts_);
+  for (auto it(live_contacts_.begin()); it != live_contacts_.end(); ++it) {
+    std::cout << (*it).endpoint().ip.to_string() << ", " << 
+        (*it).endpoint().port << std::endl;
+        for (auto inner_it((*it).local_endpoints().begin()); 
+                 inner_it !=  (*it).local_endpoints().end(); ++inner_it) {
+          std::cout << (*inner_it).ip.to_string() << ", " << 
+              (*inner_it).port << std::endl;          
+        }
+    std::cout << (*it).rendezvous_endpoint().ip.to_string() << ", " << 
+        (*it).rendezvous_endpoint().port << std::endl;       
+  }
+  return true;
+}
+
+bool Node::WriteBootstrapFile(const fs::path& bootstrap) {
+  std::vector<Contact> contacts;
+  Contact contact(transport_->transport_details().endpoint,
+      transport_->transport_details().local_endpoints,
+      transport_->transport_details().rendezvous_endpoint, false, false);
+  contacts.push_back(contact);
+  return WriteContactsToFile(bootstrap, contacts);
 }
 
 } // detection

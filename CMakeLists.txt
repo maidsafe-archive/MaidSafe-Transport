@@ -165,6 +165,7 @@ SOURCE_GROUP("Test Header Files" FILES ${HEADER_FILES_TEST_TRANSPORT_DIR})
 ###################################################################################################
 MS_ADD_STATIC_LIBRARY(${MS_PROJECT_NAME} ${ALL_FILES})
 MS_ADD_EXECUTABLE(TESTtransport Tests ${ALL_FILES_TEST_TRANSPORT_DIR})
+MS_ADD_EXECUTABLE(NatDetection Demo ${ALL_FILES_NAT_DETECTION_APP_DIR})
 # MS_ADD_EXECUTABLE(TESTnatpmp Tests ${ALL_FILES_TEST_MAIN} ${ALL_FILES_TEST_NATPMP_DIR})
 # MS_ADD_EXECUTABLE(TESTupnp Tests ${ALL_FILES_TEST_MAIN} ${ALL_FILES_TEST_UPNP_DIR})
 
@@ -172,6 +173,7 @@ TARGET_LINK_LIBRARIES(maidsafe_transport_static
                         maidsafe_common_static
                         protobuf_static)
 TARGET_LINK_LIBRARIES(TESTtransport maidsafe_transport_static gtest_static gmock_static)
+TARGET_LINK_LIBRARIES(NatDetection maidsafe_transport_static boost_program_options)
 # TARGET_LINK_LIBRARIES(TESTnatpmp maidsafe_transport_static gtest_static)
 # TARGET_LINK_LIBRARIES(TESTupnp maidsafe_transport_static gtest_static)
 

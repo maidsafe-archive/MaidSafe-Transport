@@ -78,7 +78,7 @@ void NatDetectionRpcs::DoNatDetection(const std::vector<Contact> &candidates,
                 transport, message_handler, request, full, index));
   std::cout << candidates[index].endpoint().ip << ", " << candidates[index].endpoint().port << std::endl;
   transport->Send(request, candidates[index].endpoint(),
-                   transport::kDefaultInitialTimeout*2);
+                  kDefaultInitialTimeout*2);
 }
 
 void NatDetectionRpcs::KeepAlive(const Endpoint endpoint,

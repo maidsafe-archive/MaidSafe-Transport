@@ -38,15 +38,20 @@ namespace transport {
 
 namespace detection {
 
-class NatDetection {
+enum NodeType {kUnknown, kClient, kRendezvous, kProxy};
+
+class NatDetectionNode {
  public:
-  NatDetectionApp();   
-  void SetUpProxy();
-  void SetupRendezvous(const fs::path& bootstrap);
-  void SetUpClient();
+  NatDetectionNode();
+  void SetUpProxy(const fs::path& bootstrap);
+  void SetUpRendezvous(const fs::path& proxy_bootstrap,
+                       const fs::path& bootstrap);
+  void SetUpClient(const fs::path& bootstrap);
+  int16_t Detect();
   
  private:
    NodePtr node_;
+   NodeType node_type_;
 }; // NatDetectionApp
   
 } // detection

@@ -28,6 +28,7 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "maidsafe/transport/utils.h"
 #include "maidsafe/transport/log.h"
 #include "maidsafe/transport/network_interface.h"
+#include "maidsafe/transport/contact.h"
 
 namespace maidsafe {
 

@@ -25,11 +25,13 @@ TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#include "maidsafe/transport/contact.h"
-
 #include <string>
+#include <fstream>
 
-#include "maidsafe/transport/transport_pb.h"
+#include "maidsafe/transport/contact.h"
+#include "maidsafe/transport/contact_utils.h"
+#include "maidsafe/transport/log.h"
+
 
 namespace maidsafe {
 
@@ -253,6 +255,61 @@ int Contact::Parse(const std::string &serialised) {
 
 bool IsValid(const Endpoint &endpoint) {
   return !(endpoint.ip == transport::IP() || endpoint.port == 0);
+}
+
+bool WriteContactsToFile(const fs::path &filename,
+                         std::vector<Contact> &contacts) {
+  if (contacts.empty())
+    return false;
+  for (auto it(contacts.begin()); it != contacts.end(); ++it) {
+    std::cout << (*it).endpoint().ip.to_string() << ", " << 
+        (*it).endpoint().port << std::endl;
+        for (auto inner_it((*it).local_endpoints().begin()); 
+                 inner_it !=  (*it).local_endpoints().end(); ++inner_it) {
+          std::cout << (*inner_it).ip.to_string() << ", " << 
+              (*inner_it).port << std::endl;          
+        }
+    std::cout << (*it).rendezvous_endpoint().ip.to_string() << ", " << 
+        (*it).rendezvous_endpoint().port << std::endl;       
+  }
+  protobuf::BootstrapContacts bootstrap_contacts;
+  for (size_t i = 0; i < contacts.size(); i++) {
+    protobuf::Contact * pb_contact = bootstrap_contacts.add_contact();
+    *pb_contact = ToProtobuf(contacts.at(i));
+  }
+  {
+    // Write the new bootstrap contacts back to disk.
+    std::ofstream ofs(filename.c_str(), std::ios::binary | std::ios::trunc);
+    if (!bootstrap_contacts.SerializeToOstream(&ofs)) {
+      DLOG(WARNING) << "Failed to write bootstrap contacts.";
+      return false;
+    }
+  }
+  return true;
+}
+
+bool ReadContactsFromFile(const fs::path &filename,
+                          std::vector<Contact> *contacts) {
+  if (contacts == nullptr)
+    return false;
+  protobuf::BootstrapContacts bootstrap_contacts;
+  {
+    // Read the existing bootstrap contacts.
+    std::ifstream ifs(filename.c_str(), std::ios::binary);
+    if (!ifs.is_open()) {
+      DLOG(WARNING) << "Failed to open file : " <<  filename.string();
+      return false;
+    }
+    if (!bootstrap_contacts.ParseFromIstream(&ifs)) {
+      DLOG(WARNING) << "Failed to parse bootstrap contacts.";
+      return false;
+    }
+  }
+  for (int i = 0; i < bootstrap_contacts.contact_size(); i++) {
+    Contact contact = FromProtobuf(bootstrap_contacts.contact(i));
+    contacts->push_back(contact);
+  }
+  return true;
 }
 
 }  // namespace dht

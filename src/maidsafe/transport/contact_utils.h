@@ -25,53 +25,17 @@ TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#include "maidsafe/transport/nat-detection/node.h"
-#include "maidsafe/transport/nat-detection/nat_detection.h"
+#include "maidsafe/transport/transport_pb.h"
+#include "maidsafe/transport/contact.h"
 
 namespace maidsafe {
 
 namespace transport {
 
-namespace detection {
-  
-NatDetection::NatDetection() : node(new Node) {}
+Contact FromProtobuf(const protobuf::Contact &protobuf_contact);
 
-void NatDetection::SetUpClient() {
-}
-
-void NatDetection::SetUpProxy() {
-  if (!node_->IsDirectlyConnected()) {
-    std::cout << "The node is not publicly accessible." << std::endl;
-    return;
-  }
-  if (!node_->StartListening()) {
-    std::cout << "Failed to start listening." << std::endl;
-    return;
-  }
-  if (!node_->WriteBootstrapFile()) {
-    std::cout << "Failed to create bootstrap file." << std::endl;    
-  }
-}
-
-void NatDetection::SetUpRendezvous(const fs::path& bootstrap) {
-  std::vector<Contact> contacts;
-  if (!node_->IsDirectlyConnected()) {
-    std::cout << "The node is not publicly accessible." << std::endl;
-    return;
-  }
-  if (!node_->StartListening()) {
-    std::cout << "Failed to start listening." << std::endl;
-    return;
-  }  
-  if (node_->SetLiveContacts(bootstrap, &contacts)) {
-    std::cout << "Failed to retrieve contacts from bootstrap file." << std::endl;
-  }
-  node_->set_live_contacts(contacts.at(0));
-}
-
-} // detection
+protobuf::Contact ToProtobuf(const Contact &contact);
 
 } // transport
 
 } // maidsafe
-  
