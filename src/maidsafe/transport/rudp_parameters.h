@@ -35,7 +35,7 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "maidsafe/common/utils.h"
 #include "maidsafe/transport/version.h"
 
-#if MAIDSAFE_TRANSPORT_VERSION != 104
+#if MAIDSAFE_TRANSPORT_VERSION != 300
 #  error This API is not compatible with the installed library.\
     Please update the maidsafe-transport library.
 #endif
@@ -88,6 +88,9 @@ struct RudpParameters {
 
   // Slow speed threshold to force the socket closed, in b/s
   static boost::uint32_t slow_speed_threshold;
+
+  // Timeout during client connection establishment
+  static boost::posix_time::time_duration client_connect_timeout;
 
   // Defined connection types
   enum ConnectionType {
