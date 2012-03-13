@@ -56,7 +56,9 @@ void NatDetection::Detect(
                       full, std::bind(&NatDetection::DetectCallback, this,
                                       args::_1, args::_2, nat_type, transport,
                                       rendezvous_endpoint, &cond_var));
-  cond_var.timed_wait(lock, kDefaultInitialTimeout*2);
+  if (!cond_var.timed_wait(lock, kDefaultInitialTimeout*2)) {
+    *nat_type = kNotConnected;
+  }
 }
 
 void NatDetection::DetectCallback(const int &nat_type,
@@ -65,7 +67,6 @@ void NatDetection::DetectCallback(const int &nat_type,
                                   TransportPtr transport,
                                   Endpoint *rendezvous_endpoint,
                                   boost::condition_variable *cond_var) {
-  std::cout << "NatDetection::DetectCallback: " << nat_type << std::endl;
   if (nat_type >= 0) {
     *out_nat_type = static_cast<NatType>(nat_type);
     transport->transport_details_.endpoint = details.endpoint;

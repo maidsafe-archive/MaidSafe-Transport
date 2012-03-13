@@ -61,48 +61,20 @@ Node::~Node() {
   asio_service_.Stop();
 }
 
-void Node::ConnectToSignals(RudpTransportPtr transport,
-    RudpMessageHandlerPtr message_handler) {
-  transport->on_message_received()->connect(
-  transport::OnMessageReceived::element_type::slot_type(
-      &RudpMessageHandler::OnMessageReceived, message_handler.get(),
-      _1, _2, _3, _4).track_foreign(message_handler));
-  transport->on_error()->connect(
-      transport::OnError::element_type::slot_type(
-          &RudpMessageHandler::OnError,
-          message_handler.get(), _1, _2).track_foreign(message_handler));
-}
-
 bool Node::StartListening() {
   TransportCondition condition(kError);
   size_t max(5), attempt(0);
   while (attempt++ < max && (condition != kSuccess)) {
-    endpoint_.port = RandomUint32() % (64000 - 1025) + 1025;
+    endpoint_.port = RandomUint32() % (65535 - 1025) + 1025;
     condition = transport_->StartListening(endpoint_);
   }
   if (condition == kSuccess) {
     // Create contact_ information for node and set contact for Rpcs
     transport::Endpoint endpoint;
-    transport_->transport_details_.local_endpoints.clear();
-    std::cout << transport_->transport_details().endpoint.ip.to_string() << std::endl;
     endpoint.ip = transport_->transport_details().endpoint.ip;
     endpoint.port = transport_->transport_details().endpoint.port;
     transport_->transport_details_.local_endpoints.push_back(endpoint);
-    std::cout << endpoint.ip.to_string() << std::endl;
   }
-  
-  TransportDetails transport_details = transport_->transport_details();
-  for (auto inner_it(transport_details.local_endpoints.begin()); 
-           inner_it !=  transport_details.local_endpoints.end();
-           ++inner_it) {
-          std::cout << inner_it->ip.to_string() << ", " << 
-              (*inner_it).port << std::endl;          
-  }
-  std::cout <<
-      transport_->transport_details().rendezvous_endpoint.ip.to_string() << 
-          ", " << 
-        transport_->transport_details().rendezvous_endpoint.port <<
-        std::endl;
   ConnectToSignals(transport_, message_handler_);
   return (condition == kSuccess);
 }
@@ -127,49 +99,36 @@ boost::asio::io_service& Node::io_service() {
   return asio_service_.service();
 }
 
-bool Node::SetLiveContacts(const fs::path& bootstrap) {
-  bool result(ReadContactsFromFile(bootstrap, &live_contacts_));
-  for (auto it(live_contacts_.begin()); it != live_contacts_.end(); ++it) {
-    std::cout << (*it).endpoint().ip.to_string() << ", " << 
-        (*it).endpoint().port << std::endl;
-        std::vector<Endpoint> local_endpoints((*it).local_endpoints());
-        for (auto inner_it(local_endpoints.begin()); 
-                 inner_it !=  local_endpoints.end(); ++inner_it) {
-          std::cout << (*inner_it).ip.to_string() << ", " << 
-              (*inner_it).port << std::endl;          
-        }
-    std::cout << (*it).rendezvous_endpoint().ip.to_string() << ", " << 
-        (*it).rendezvous_endpoint().port << std::endl;       
-  }
-  return result;
-}
+// bool Node::SetLiveContacts(const fs::path& bootstrap) {
+//   return ReadContactsFromFile(bootstrap, &live_contacts_);
+// }
 
-bool Node::IsDirectlyConnected() {
-  IP external_ip;
-  std::vector<IP>  local_addresses(GetLocalAddresses());
-  if (!ExternalIpAddress(&external_ip))
-    return false;
-  for (auto it(local_addresses.begin()); it != local_addresses.end(); ++it) {
-    std::cout << (*it).to_string() << std::endl;
-    if (external_ip == (*it)) {
-      return true;
-    }
-  }
-  return false;
-}
+// bool Node::IsDirectlyConnected() {
+//   IP external_ip;
+//   std::vector<IP>  local_addresses(GetLocalAddresses());
+//   if (!ExternalIpAddress(&external_ip))
+//     return false;
+//   for (auto it(local_addresses.begin()); it != local_addresses.end(); ++it) {
+//     std::cout << (*it).to_string() << std::endl;
+//     if (external_ip == (*it)) {
+//       return true;
+//     }
+//   }
+//   return false;
+// }
 
-bool Node::ExternalIpAddress(IP *external_ip) {
-  upnp::UpnpIgdClient upnp_client;
-  bool result(upnp_client.InitControlPoint());
-  if (!result)
-    return false;
-  std::string ip(upnp_client.GetExternalIpAddress());
-  if (ip.empty())
-    return false;
-  std::cout << ip << std::endl;
-  *external_ip = IP::from_string(ip);
-  return true;
-}
+// bool Node::ExternalIpAddress(IP *external_ip) {
+//   upnp::UpnpIgdClient upnp_client;
+//   bool result(upnp_client.InitControlPoint());
+//   if (!result)
+//     return false;
+//   std::string ip(upnp_client.GetExternalIpAddress());
+//   if (ip.empty())
+//     return false;
+//   std::cout << ip << std::endl;
+//   *external_ip = IP::from_string(ip);
+//   return true;
+// }
 
 int16_t Node::DetectNatType() {
   NatDetection nat_detection;
@@ -177,23 +136,11 @@ int16_t Node::DetectNatType() {
   Endpoint rendezvous_endpoint;
   nat_detection.Detect(live_contacts_, true, transport_, message_handler_,
                        &nat_type, &rendezvous_endpoint);
-  return 0;
+  return nat_type;
 }
 
 bool Node::ReadBootstrapFile(const fs::path& bootstrap) {
-  ReadContactsFromFile(bootstrap, &live_contacts_);
-  for (auto it(live_contacts_.begin()); it != live_contacts_.end(); ++it) {
-    std::cout << (*it).endpoint().ip.to_string() << ", " << 
-        (*it).endpoint().port << std::endl;
-        for (auto inner_it((*it).local_endpoints().begin()); 
-                 inner_it !=  (*it).local_endpoints().end(); ++inner_it) {
-          std::cout << (*inner_it).ip.to_string() << ", " << 
-              (*inner_it).port << std::endl;          
-        }
-    std::cout << (*it).rendezvous_endpoint().ip.to_string() << ", " << 
-        (*it).rendezvous_endpoint().port << std::endl;       
-  }
-  return true;
+  return ReadContactsFromFile(bootstrap, &live_contacts_);
 }
 
 bool Node::WriteBootstrapFile(const fs::path& bootstrap) {
@@ -203,6 +150,18 @@ bool Node::WriteBootstrapFile(const fs::path& bootstrap) {
       transport_->transport_details().rendezvous_endpoint, false, false);
   contacts.push_back(contact);
   return WriteContactsToFile(bootstrap, contacts);
+}
+
+void Node::ConnectToSignals(RudpTransportPtr transport,
+    RudpMessageHandlerPtr message_handler) {
+  transport->on_message_received()->connect(
+  transport::OnMessageReceived::element_type::slot_type(
+      &RudpMessageHandler::OnMessageReceived, message_handler.get(),
+      _1, _2, _3, _4).track_foreign(message_handler));
+  transport->on_error()->connect(
+      transport::OnError::element_type::slot_type(
+          &RudpMessageHandler::OnError,
+          message_handler.get(), _1, _2).track_foreign(message_handler));
 }
 
 } // detection

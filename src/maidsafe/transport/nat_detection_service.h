@@ -82,6 +82,7 @@ class NatDetectionService : public std::enable_shared_from_this<NatDetectionServ
       const Endpoint &remote_endpoint,
       const protobuf::ProxyConnectResponse &response,
       const Endpoint &peer,
+      boost::mutex *mutex,
       boost::condition_variable *condition_variable,
       TransportCondition *tc,
       bool *result);
@@ -94,12 +95,12 @@ class NatDetectionService : public std::enable_shared_from_this<NatDetectionServ
   void Rendezvous(const Info & /*info*/,
                   const protobuf::RendezvousRequest &request,
                   protobuf::RendezvousAcknowledgement*);
-
+  // At proxy
   virtual void ConnectResult(const int &in_result,
                              int *out_result,
                              boost::mutex *mutex,
                              boost::condition_variable *condition);
-
+  // At originator
   void OriginConnectResult(const TransportCondition &result,
                            const Endpoint &endpoint);
 
@@ -133,8 +134,6 @@ class NatDetectionService : public std::enable_shared_from_this<NatDetectionServ
                                TransportPtr transport);
 
   Contact GetDirectlyConnectedContact();
-
-  bool StartListening(RudpTransportPtr transport, Endpoint* endpoint);
 
   boost::asio::io_service &asio_service_;
   std::shared_ptr<RudpMessageHandler> message_handler_;

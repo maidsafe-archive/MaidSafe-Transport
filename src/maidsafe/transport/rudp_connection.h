@@ -126,7 +126,8 @@ class RudpConnection : public std::enable_shared_from_this<RudpConnection> {
   std::vector<unsigned char> buffer_;
   size_t data_size_, data_received_;
   Timeout timeout_for_response_;
-  enum TimeoutState { kNoTimeout, kSending, kReceiving, kConnecting } timeout_state_;
+  enum TimeoutState
+      { kNoTimeout, kSending, kReceiving, kConnecting } timeout_state_;
 };
 
 }  // namespace transport

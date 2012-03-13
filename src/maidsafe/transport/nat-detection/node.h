@@ -57,16 +57,13 @@ class Node {
   RudpTransportPtr transport() const;
   RudpMessageHandlerPtr message_handler() const;
   boost::asio::io_service& io_service();
-  bool SetLiveContacts(const fs::path& bootstrap);
   int16_t DetectNatType();
-                       
-  // Checks whether a node is directly connected
-  bool IsDirectlyConnected();
   bool ReadBootstrapFile(const fs::path& bootstrap);
   bool WriteBootstrapFile(const fs::path& bootstrap);
+//  bool IsDirectlyConnected();
 
  private:
-  bool ExternalIpAddress(IP *external_ip);
+//  bool ExternalIpAddress(IP *external_ip);
   void ConnectToSignals(RudpTransportPtr transport,
                         RudpMessageHandlerPtr message_handler);
 

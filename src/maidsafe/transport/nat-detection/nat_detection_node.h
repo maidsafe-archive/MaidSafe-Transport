@@ -25,12 +25,14 @@ TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
+#ifndef MAIDSAFE_TRANSPORT_NAT_DETECTION__NAT_DETECTION_NODE_H_
+#define MAIDSAFE_TRANSPORT_NAT_DETECTION__NAT_DETECTION_NODE_H_
+
 #include <memory>
 
+#include "maidsafe/transport/nat-detection/node.h"
 #include "maidsafe/common/utils.h"
 
-class Node;
-typedef std::shared_ptr<Node> NodePtr;
 
 namespace maidsafe {
 
@@ -47,16 +49,19 @@ class NatDetectionNode {
   void SetUpRendezvous(const fs::path& proxy_bootstrap,
                        const fs::path& bootstrap);
   void SetUpClient(const fs::path& bootstrap);
-  int16_t Detect();
+  std::string Detect();
   
  private:
+   std::string ToString(const uint16_t& nat_type);
+
    NodePtr node_;
    NodeType node_type_;
-}; // NatDetectionApp
+}; // NatDetectionNode
   
 } // detection
 
 } // transport
 
 } // maidsafe
-  
+
+#endif // MAIDSAFE_TRANSPORT_NAT_DETECTION__NAT_DETECTION_NODE_H_

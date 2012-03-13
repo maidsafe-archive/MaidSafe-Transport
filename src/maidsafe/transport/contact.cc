@@ -26,7 +26,7 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 #include <string>
-#include <fstream>
+#include <fstream>  // NOLINT
 
 #include "maidsafe/transport/contact.h"
 #include "maidsafe/transport/contact_utils.h"
@@ -261,17 +261,6 @@ bool WriteContactsToFile(const fs::path &filename,
                          std::vector<Contact> &contacts) {
   if (contacts.empty())
     return false;
-  for (auto it(contacts.begin()); it != contacts.end(); ++it) {
-    std::cout << (*it).endpoint().ip.to_string() << ", " << 
-        (*it).endpoint().port << std::endl;
-        for (auto inner_it((*it).local_endpoints().begin()); 
-                 inner_it !=  (*it).local_endpoints().end(); ++inner_it) {
-          std::cout << (*inner_it).ip.to_string() << ", " << 
-              (*inner_it).port << std::endl;          
-        }
-    std::cout << (*it).rendezvous_endpoint().ip.to_string() << ", " << 
-        (*it).rendezvous_endpoint().port << std::endl;       
-  }
   protobuf::BootstrapContacts bootstrap_contacts;
   for (size_t i = 0; i < contacts.size(); i++) {
     protobuf::Contact * pb_contact = bootstrap_contacts.add_contact();

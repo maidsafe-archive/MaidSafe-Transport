@@ -25,6 +25,9 @@ TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
+#ifndef MAIDSAFE_TRANSPORT_CONTACT_UTILS_H_
+#define MAIDSAFE_TRANSPORT_CONTACT_UTILS_H_
+
 #include "maidsafe/transport/transport_pb.h"
 #include "maidsafe/transport/contact.h"
 
@@ -36,6 +39,8 @@ Contact FromProtobuf(const protobuf::Contact &protobuf_contact);
 
 protobuf::Contact ToProtobuf(const Contact &contact);
 
-} // transport
+}  // namespace transport
 
-} // maidsafe
+}  // namespace maidsafe
+
+#endif  // MAIDSAFE_TRANSPORT_CONTACT_UTILS_H_

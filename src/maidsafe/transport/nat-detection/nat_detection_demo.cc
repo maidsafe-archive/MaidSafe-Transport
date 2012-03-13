@@ -62,6 +62,7 @@ int main(int argc, char **argv) {
   mt::detection::NatDetectionNode node;
   options_description.add_options()
       ("help,h", "Print options.")
+      ("setup,s", "Setting up")
       ("version,V", "Print program version.")
       ("logfile,l", po::value(&logfile), "Path of log file.")
       ("verbose,v", po::bool_switch(), "Verbose logging to console and file.")        
@@ -92,6 +93,16 @@ int main(int argc, char **argv) {
       return 0;
     }
     
+    if (variables_map.count("setup")) {
+       std::cout << "Setting up involves running three nodes as:" << std::endl;
+       std::cout << "  1) A proxy node which will be visible ";
+       std::cout << "to rendezvous node," << std::endl;
+       std::cout << "  2) A directly connected rendezvous node using ";
+       std::cout << "the bootstrap file created by proxy, and" << std::endl;
+       std::cout << "  3) A client node using the bootstrap file ";
+       std::cout << "created by rendezvous node." << std::endl;
+    }
+
     ConflictingOptions(variables_map, "client", "rendezvous");
     ConflictingOptions(variables_map, "client", "proxy");
     ConflictingOptions(variables_map, "rendezvous", "proxy");
@@ -155,13 +166,15 @@ int main(int argc, char **argv) {
     bool client(variables_map["client"].as<bool>());
     if (client) {
       node.SetUpClient(bootstrap_file_path);
-      node.Detect();
+      std::cout << "Nat type is: " << node.Detect() <<std::endl;
     }
 
-    ULOG(INFO) << "===============================";
-    ULOG(INFO) << "     Press Ctrl+C to exit.";
-    ULOG(INFO) << "===============================";
-    signal(SIGINT, CtrlCHandler);
-    while (!ctrlc_pressed)
-      maidsafe::Sleep(boost::posix_time::seconds(2));
+    if (rendezvous || proxy) {
+      ULOG(INFO) << "===============================";
+      ULOG(INFO) << "     Press Ctrl+C to exit.";
+      ULOG(INFO) << "===============================";
+      signal(SIGINT, CtrlCHandler);
+      while (!ctrlc_pressed)
+        maidsafe::Sleep(boost::posix_time::seconds(2));
+    }
 }

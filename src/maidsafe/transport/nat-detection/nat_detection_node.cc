@@ -25,8 +25,9 @@ TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#include "maidsafe/transport/nat-detection/node.h"
 #include "maidsafe/transport/nat-detection/nat_detection_node.h"
+
+#include "maidsafe/transport/log.h"
 
 namespace maidsafe {
 
@@ -39,31 +40,38 @@ NatDetectionNode::NatDetectionNode() : node_(new Node),
 
 void NatDetectionNode::SetUpClient(const fs::path& bootstrap) {
   if (node_type_ != detection::kUnknown) {
-    std::cout << "Node is already set up." << std::endl;
+    DLOG(ERROR) << "Node is already set up.";
     return;
   }
   if (!node_->StartListening()) {
-    std::cout << "Failed to start listening." << std::endl;
+    DLOG(ERROR) << "Failed to start listening.";
     return;
   }
-  if (!node_->SetLiveContacts(bootstrap)) {
-    std::cout << "Failed to retrieve contacts from bootstrap file." << std::endl;
+  if (!node_->ReadBootstrapFile(bootstrap)) {
+    DLOG(ERROR) << "Failed to retrieve contacts from bootstrap file.";
     return;
   }
   node_type_ = detection::kClient;
 }
 
-int16_t NatDetectionNode::Detect() {
+std::string NatDetectionNode::Detect() {
   if (node_type_ != detection::kClient) {
     std::cout << "Node is not set up as client" << std::endl;
-    return detection::kUnknown;
+    return std::string("Unknown");
   } else 
-    return node_->DetectNatType();
+    return ToString(node_->DetectNatType());
+}
+
+std::string NatDetectionNode::ToString(const uint16_t& nat_type) {
+  std::string nat_types[] = {"Manual Port Mapped", "Directly connected",
+        "Nat pmp", "Upnp", "Full cone", "Port restricted",
+        "Not connected, make sure setup is done correctly."};
+  return nat_types[nat_type];
 }
 
 void NatDetectionNode::SetUpProxy(const fs::path& bootstrap) {
   if (node_type_ != detection::kUnknown) {
-    std::cout << "Node is already set up." << std::endl;
+    DLOG(INFO) << "Node is already set up.";
     return;
   }
 //   if (!node_->IsDirectlyConnected()) {
@@ -71,11 +79,11 @@ void NatDetectionNode::SetUpProxy(const fs::path& bootstrap) {
 //     return;
 //   }
   if (!node_->StartListening()) {
-    std::cout << "Failed to start listening." << std::endl;
+    DLOG(ERROR) << "Failed to start listening.";
     return;
   }
   if (!node_->WriteBootstrapFile(bootstrap)) {
-    std::cout << "Failed to create bootstrap file." << std::endl;
+    DLOG(ERROR) << "Failed to create bootstrap file.";
     return;
   }
   node_type_ = detection::kProxy;
@@ -84,7 +92,7 @@ void NatDetectionNode::SetUpProxy(const fs::path& bootstrap) {
 void NatDetectionNode::SetUpRendezvous(const fs::path& proxy_bootstrap,
                                        const fs::path& bootstrap) {
   if (node_type_ != detection::kUnknown) {
-    std::cout << "Node is already set up." << std::endl;
+    DLOG(ERROR) << "Node is already set up.";
     return;
   }
 //   if (!node_->IsDirectlyConnected()) {
@@ -92,16 +100,15 @@ void NatDetectionNode::SetUpRendezvous(const fs::path& proxy_bootstrap,
 //     return;
 //   }
   if (!node_->StartListening()) {
-    std::cout << "Failed to start listening." << std::endl;
+    DLOG(ERROR) << "Failed to start listening.";
     return;
   }  
-  if (!node_->SetLiveContacts(proxy_bootstrap)) {
-    std::cout << "Failed to retrieve contacts from bootstrap file." <<
-        std::endl;
+  if (!node_->ReadBootstrapFile(proxy_bootstrap)) {
+    DLOG(ERROR) << "Failed to retrieve contacts from bootstrap file.";
     return;
   }
   if (!node_->WriteBootstrapFile(bootstrap)) {
-    std::cout << "Failed to create bootstrap file." << std::endl;
+    DLOG(ERROR) << "Failed to create bootstrap file.";
     return;
   }
   node_type_ = detection::kRendezvous;

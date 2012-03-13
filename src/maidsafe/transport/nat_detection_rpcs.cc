@@ -25,10 +25,12 @@ TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
+#include "maidsafe/transport/nat_detection_rpcs.h"
+
 #include <vector>
 #include <string>
 
-#include "maidsafe/transport/nat_detection_rpcs.h"
+#include "maidsafe/transport/log.h"
 #include "maidsafe/transport/contact.h"
 #include "maidsafe/transport/message_handler.h"
 
@@ -76,7 +78,6 @@ void NatDetectionRpcs::DoNatDetection(const std::vector<Contact> &candidates,
       std::bind(&NatDetectionRpcs::NatDetectionCallback, this, args::_1,
                 protobuf::NatDetectionResponse(), candidates, callback,
                 transport, message_handler, request, full, index));
-  std::cout << candidates[index].endpoint().ip << ", " << candidates[index].endpoint().port << std::endl;
   transport->Send(request, candidates[index].endpoint(),
                   kDefaultInitialTimeout*2);
 }
@@ -102,7 +103,7 @@ void NatDetectionRpcs::NatDetectionCallback(const TransportCondition &result,
                                 const std::string &request,
                                 const bool &full,
                                 const size_t &index) {
-  std::cout << "NatDetectionRpcs::NatDetectionCallback: " << result << std::endl;
+  DLOG(INFO) << "NatDetectionRpcs::NatDetectionCallback: " << result;
   TransportDetails transport_details;
   if (result == kSuccess) {
     transport_details.endpoint.ip.from_string(response.endpoint().ip().data());

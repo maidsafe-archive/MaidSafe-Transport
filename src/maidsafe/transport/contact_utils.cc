@@ -27,6 +27,8 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "maidsafe/transport/contact_utils.h"
 
+#include <vector>
+
 #include "maidsafe/transport/transport.h"
 
 namespace maidsafe {
@@ -52,7 +54,7 @@ Contact FromProtobuf(const protobuf::Contact &pb_contact) {
                  static_cast<uint16_t>(pb_contact.rendezvous().port())) :
         Endpoint(),
       pb_contact.has_tcp443() ? pb_contact.tcp443() : false,
-      pb_contact.has_tcp80() ? pb_contact.tcp80() : false);  
+      pb_contact.has_tcp80() ? pb_contact.tcp80() : false);
 }
 
 protobuf::Contact ToProtobuf(const Contact &contact) {
@@ -80,9 +82,9 @@ protobuf::Contact ToProtobuf(const Contact &contact) {
   if (IsValid(contact.tcp80endpoint()))
     pb_contact.set_tcp80(true);
 
-  return pb_contact;  
-} 
-  
-} // transport
+  return pb_contact;
+}
 
-} // maidsafe
+}  // namespace transport
+
+}  // namespace maidsafe

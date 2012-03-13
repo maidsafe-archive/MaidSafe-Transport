@@ -180,7 +180,7 @@ namespace test {
 
 namespace detection {
   class Node;
-} // namespace detection
+}  // namespace detection
 
 
 // Base class for all transport types.
