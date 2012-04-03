@@ -57,11 +57,16 @@ TcpTransport::~TcpTransport() {
 }
 
 TransportCondition TcpTransport::StartListening(const Endpoint &endpoint) {
-  if (listening_port_ != 0)
+  if (listening_port_ != 0) {
+    DLOG(ERROR) << "StartListening - Already listening (port "
+                << listening_port_ << ").";
     return kAlreadyStarted;
+  }
 
-  if (endpoint.port == 0)
+  if (endpoint.port == 0) {
+    DLOG(ERROR) << "StartListening - Can't listen on port 0.";
     return kInvalidPort;
+  }
 
   ip::tcp::endpoint ep(endpoint.ip, endpoint.port);
   acceptor_.reset(new ip::tcp::acceptor(asio_service_));
@@ -69,23 +74,35 @@ TransportCondition TcpTransport::StartListening(const Endpoint &endpoint) {
   bs::error_code ec;
   acceptor_->open(ep.protocol(), ec);
 
-  if (ec)
+  if (ec) {
+    DLOG(ERROR) << "StartListening - Could not open the socket: "
+                << ec.message();
     return kInvalidAddress;
+  }
 
 //  acceptor_->set_option(ip::tcp::acceptor::reuse_address(true), ec);
 
-  if (ec)
+  if (ec) {
+    DLOG(ERROR) << "StartListening - Could not set the reuse address option: "
+                << ec.message();
     return kSetOptionFailure;
+  }
 
   acceptor_->bind(ep, ec);
 
-  if (ec)
+  if (ec) {
+    DLOG(ERROR) << "StartListening - Could not bind socket to endpoint: "
+                << ec.message();
     return kBindError;
+  }
 
   acceptor_->listen(asio::socket_base::max_connections, ec);
 
-  if (ec)
+  if (ec) {
+    DLOG(ERROR) << "StartListening - Could not start listening: "
+                << ec.message();
     return kListenError;
+  }
 
   ConnectionPtr new_connection(
       std::make_shared<TcpConnection>(shared_from_this(),
@@ -150,8 +167,9 @@ void TcpTransport::Send(const std::string &data,
                         const Timeout &timeout) {
   DataSize msg_size(static_cast<DataSize>(data.size()));
   if (msg_size > kMaxTransportMessageSize()) {
-    DLOG(ERROR) << "Data size " << msg_size << " bytes (exceeds limit of "
-                << kMaxTransportMessageSize() << ")";
+    DLOG(ERROR) << "Send - Data size " << msg_size
+                << " bytes (exceeds limit of " << kMaxTransportMessageSize()
+                << ")";
     Endpoint ep;
     (*on_error_)(kMessageSizeTooLarge, ep);
     return;

@@ -71,6 +71,7 @@ void MessageHandler::OnMessageReceived(const std::string &request,
 
 void MessageHandler::OnError(const TransportCondition &transport_condition,
                              const Endpoint &remote_endpoint) {
+  DLOG(ERROR) << "OnError (" << transport_condition << ")";
   (*on_error_)(transport_condition, remote_endpoint);
 }
 

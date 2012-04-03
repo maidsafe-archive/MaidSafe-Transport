@@ -107,7 +107,7 @@ void TcpConnection::DoStartSending() {
 
 void TcpConnection::CheckTimeout(const bs::error_code &ec) {
   if (ec && ec != boost::asio::error::operation_aborted) {
-    DLOG(ERROR) << "TcpConnection check timeout error: " << ec.message();
+    DLOG(ERROR) << "CheckTimeout - Failed: " << ec.message();
     bs::error_code ignored_ec;
     socket_.close(ignored_ec);
     return;
@@ -119,6 +119,7 @@ void TcpConnection::CheckTimeout(const bs::error_code &ec) {
 
   if (timer_.expires_at() <= asio::deadline_timer::traits_type::now()) {
     // Time has run out. Close the socket to cancel outstanding operations.
+    DLOG(ERROR) << "CheckTimeout - Timer expired.";
     bs::error_code ignored_ec;
     socket_.close(ignored_ec);
   } else {
@@ -141,16 +142,18 @@ void TcpConnection::StartReadSize() {
 }
 
 void TcpConnection::HandleReadSize(const bs::error_code &ec) {
+  if (ec) {
+    DLOG(ERROR) << "HandleReadSize - Failed: " << ec.message();
+    return CloseOnError(kReceiveFailure);
+  }
+
   bs::error_code ignored_ec;
   CheckTimeout(ignored_ec);
 
   // If the socket is closed, it means the timeout has been triggered.
   if (!socket_.is_open()) {
+    DLOG(ERROR) << "HandleReadSize - Socket not open anymore.";
     return CloseOnError(kReceiveTimeout);
-  }
-
-  if (ec) {
-    return CloseOnError(kReceiveFailure);
   }
 
   DataSize size = (((((size_buffer_.at(0) << 8) | size_buffer_.at(1)) << 8) |
@@ -183,16 +186,18 @@ void TcpConnection::StartReadData() {
 }
 
 void TcpConnection::HandleReadData(const bs::error_code &ec, size_t length) {
+  if (ec) {
+    DLOG(ERROR) << "HandleReadData - Failed: " << ec.message();
+    return CloseOnError(kReceiveFailure);
+  }
+
   bs::error_code ignored_ec;
   CheckTimeout(ignored_ec);
 
   // If the socket is closed, it means the timeout has been triggered.
   if (!socket_.is_open()) {
+    DLOG(ERROR) << "HandleReadData - Socket not open anymore.";
     return CloseOnError(kReceiveTimeout);
-  }
-
-  if (ec) {
-    return CloseOnError(kReceiveFailure);
   }
 
   data_received_ += length;
@@ -224,8 +229,8 @@ void TcpConnection::DispatchMessage() {
                                        &response_timeout);
     DataSize msg_size(static_cast<DataSize>(response.size()));
     if (response.empty() || msg_size > transport->kMaxTransportMessageSize()) {
-      DLOG(INFO) << "Data size " << msg_size << " bytes ("
-                 << transport->kMaxTransportMessageSize() << ")";
+      DLOG(INFO) << "DispatchMessage - Invalid response size: " << msg_size
+                 << " bytes (" << transport->kMaxTransportMessageSize() << ")";
       Close();
       return;
     }
@@ -256,13 +261,15 @@ void TcpConnection::StartConnect() {
 }
 
 void TcpConnection::HandleConnect(const bs::error_code &ec) {
-  // If the socket is closed, it means the timeout has been triggered.
-  if (!socket_.is_open()) {
-    return CloseOnError(kSendTimeout);
+  if (ec) {
+    DLOG(ERROR) << "HandleConnect - Failed: " << ec.message();
+    return CloseOnError(kSendFailure);
   }
 
-  if (ec) {
-    return CloseOnError(kSendFailure);
+  // If the socket is closed, it means the timeout has been triggered.
+  if (!socket_.is_open()) {
+    DLOG(ERROR) << "HandleConnect - Socket not open anymore.";
+    return CloseOnError(kSendTimeout);
   }
 
   StartWrite();
@@ -289,13 +296,15 @@ void TcpConnection::StartWrite() {
 }
 
 void TcpConnection::HandleWrite(const bs::error_code &ec) {
-  // If the socket is closed, it means the timeout has been triggered.
-  if (!socket_.is_open()) {
-    return CloseOnError(kSendTimeout);
+  if (ec) {
+    DLOG(ERROR) << "HandleWrite - Failed: " << ec.message();
+    return CloseOnError(kSendFailure);
   }
 
-  if (ec) {
-    return CloseOnError(kSendFailure);
+  // If the socket is closed, it means the timeout has been triggered.
+  if (!socket_.is_open()) {
+    DLOG(ERROR) << "HandleWrite - Socket not open anymore.";
+    return CloseOnError(kSendTimeout);
   }
 
   // Start receiving response
@@ -310,6 +319,9 @@ void TcpConnection::CloseOnError(const TransportCondition &error) {
   if (std::shared_ptr<TcpTransport> transport = transport_.lock()) {
     Endpoint ep;
     (*transport->on_error_)(error, ep);
+  } else {
+    DLOG(ERROR) << "CloseOnError - Failed, but can't signal. (" << error
+                << ")";
   }
   DoClose();
 }
