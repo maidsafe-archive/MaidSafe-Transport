@@ -136,6 +136,9 @@ void reset() {
   }
 
  private:
+  TcpTestMessageHandler(const TcpTestMessageHandler&);
+  TcpTestMessageHandler &operator=(const TcpTestMessageHandler&);
+
   std::string this_id_;
   uint32_t request_recvd_count_;
   uint32_t response_recvd_count_;
@@ -151,7 +154,7 @@ void reset() {
 
 TEST(TcpTransportTest, BEH_SendFlooding) {
   const uint32_t kNumberOfMessages(500);
-  std::string messages("A", 10);
+  std::string messages('A', 10);
   boost::mutex mutex;
   boost::condition_variable cond;
   bool done(false);
