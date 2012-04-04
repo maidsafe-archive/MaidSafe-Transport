@@ -154,7 +154,7 @@ void reset() {
 
 TEST(TcpTransportTest, BEH_SendFlooding) {
   const uint32_t kNumberOfMessages(500);
-  std::string messages('A', 10);
+  std::string messages(10, 'A');
   boost::mutex mutex;
   boost::condition_variable cond;
   bool done(false);
