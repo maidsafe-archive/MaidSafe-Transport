@@ -143,7 +143,7 @@ void TcpConnection::StartReadSize() {
 
 void TcpConnection::HandleReadSize(const bs::error_code &ec) {
   if (ec) {
-    DLOG(ERROR) << "HandleReadSize - Failed: " << ec.message();
+//    DLOG(ERROR) << "HandleReadSize - Failed: " << ec.message();
     return CloseOnError(kReceiveFailure);
   }
 
