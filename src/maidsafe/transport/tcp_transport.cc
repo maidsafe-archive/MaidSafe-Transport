@@ -79,8 +79,17 @@ TransportCondition TcpTransport::StartListening(const Endpoint &endpoint) {
                 << ec.message();
     return kInvalidAddress;
   }
-
-//  acceptor_->set_option(ip::tcp::acceptor::reuse_address(true), ec);
+// Below option is interprated differently by Windows and shouldn't be used. On,
+// Windows, this will allow two processes to listen on same port. On POSIX
+// compliant OS, this option tells the kernel that even if given port is busy
+// (only TIME_WAIT state), go ahead and reuse it anyway. If it is busy, but with
+// another state, you will still get an address already in use error.
+// http://msdn.microsoft.com/en-us/library/ms740621(VS.85).aspx
+// http://www.unixguide.net/network/socketfaq/4.5.shtml
+// http://old.nabble.com/Port-allocation-problem-on-windows-(incl.-patch)-td28241079.html
+#ifndef WIN32
+  acceptor_->set_option(ip::tcp::acceptor::reuse_address(true), ec);
+#endif
 
   if (ec) {
     DLOG(ERROR) << "StartListening - Could not set the reuse address option: "
