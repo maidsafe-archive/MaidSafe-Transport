@@ -150,11 +150,8 @@ void reset() {
   boost::condition_variable * cond_var_;
 };
 
-}  // anonymous namespace
-
-TEST(TcpTransportTest, BEH_SendFlooding) {
-  const uint32_t kNumberOfMessages(500);
-  std::string messages(10, 'A');
+void SendFlooding(size_t message_count, size_t message_size) {
+  std::string messages(message_size, 'A');
   boost::mutex mutex;
   boost::condition_variable cond;
   bool done(false);
@@ -197,32 +194,49 @@ TEST(TcpTransportTest, BEH_SendFlooding) {
       _1));
 
   //  Seting up completion trigger on condition variable
-  sender_msg_handler.SetUpCompletionTrigger(kNumberOfMessages, &done, &mutex,
+  sender_msg_handler.SetUpCompletionTrigger(message_count, &done, &mutex,
                                             &cond);
 
   Endpoint listener_endpoint(listener->transport_details().endpoint);
 
   // Sending messages
-  for (uint32_t i(0); i != kNumberOfMessages; ++i) {
+  for (uint32_t i(0); i != message_count; ++i) {
     sender->Send(messages, listener_endpoint, bptime::seconds(10));
   }
-  //  Waiting for 10 seconds
+  //  Waiting for 15 seconds
   {
     boost::mutex::scoped_lock lock(mutex);
-    EXPECT_TRUE(cond.timed_wait(lock, bptime::seconds(10), [&]() {
+    EXPECT_TRUE(cond.timed_wait(lock, bptime::seconds(15), [&]() {
                                 return done;
                                 }));  // NOLINT
   }
 
-  DLOG(INFO) << "Sender - count of total send : " << kNumberOfMessages;
+  DLOG(INFO) << "Sender - count of total send : " << message_count;
   DLOG(INFO) << "Sender - count of successfull send : "
              << sender_msg_handler.response_recvd_count();
   DLOG(INFO) << "Sender - count of failed send : "
              << sender_msg_handler.error_count();
 
   // Failure Expectation
-  EXPECT_EQ(kNumberOfMessages, sender_msg_handler.response_recvd_count() +
+  EXPECT_EQ(message_count, sender_msg_handler.response_recvd_count() +
             sender_msg_handler.error_count());
+
+  asio_service_sender.Stop();
+  asio_service_listener.Stop();
+}
+
+}  // anonymous namespace
+
+TEST(TcpTransportTest, BEH_SendFlooding1MBMessage) {
+  SendFlooding(1000, 1048576);
+}
+
+TEST(TcpTransportTest, BEH_SendFloodingSmallMessage) {
+  SendFlooding(1000, 10);
+}
+
+TEST(TcpTransportTest, BEH_SendFlooding256KBMessage) {
+  SendFlooding(1000, 262144);
 }
 
 }  // namespace test
