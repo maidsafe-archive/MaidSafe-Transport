@@ -203,10 +203,10 @@ void SendFlooding(size_t message_count, size_t message_size) {
   for (uint32_t i(0); i != message_count; ++i) {
     sender->Send(messages, listener_endpoint, bptime::seconds(10));
   }
-  //  Waiting for 15 seconds
+  //  Waiting for 1 minute
   {
     boost::mutex::scoped_lock lock(mutex);
-    EXPECT_TRUE(cond.timed_wait(lock, bptime::seconds(15), [&]() {
+    EXPECT_TRUE(cond.timed_wait(lock, bptime::minutes(1), [&]() {
                                 return done;
                                 }));  // NOLINT
   }
@@ -227,15 +227,15 @@ void SendFlooding(size_t message_count, size_t message_size) {
 
 }  // anonymous namespace
 
-TEST(TcpTransportTest, BEH_SendFlooding1MBMessage) {
+TEST(TcpTransportTest, FUNC_SendFlooding1MBMessage) {
   SendFlooding(1000, 1048576);
 }
 
-TEST(TcpTransportTest, BEH_SendFloodingSmallMessage) {
+TEST(TcpTransportTest, FUNC_SendFloodingSmallMessage) {
   SendFlooding(1000, 10);
 }
 
-TEST(TcpTransportTest, BEH_SendFlooding256KBMessage) {
+TEST(TcpTransportTest, FUNC_SendFlooding256KBMessage) {
   SendFlooding(1000, 262144);
 }
 
