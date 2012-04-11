@@ -296,6 +296,12 @@ void TransportAPI<T>::RunTransportTest(const uint16_t &num_messages,
   // TODO(Fraser#5#): 2012-02-18 - Remove this sleep
   boost::this_thread::sleep(boost::posix_time::seconds(1));
 
+  listening_transports_itr = listening_transports_.begin();
+  while (listening_transports_itr != listening_transports_.end()) {
+    (*listening_transports_itr)->StopListening();
+    ++listening_transports_itr;
+  }
+
   StopAsioServices();
   CheckMessages();
   auto sending_msg_handlers_itr(sending_message_handlers_.begin());

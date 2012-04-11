@@ -221,6 +221,8 @@ void SendFlooding(size_t message_count, size_t message_size) {
   EXPECT_EQ(message_count, sender_msg_handler.response_recvd_count() +
             sender_msg_handler.error_count());
 
+  listener->StopListening();
+
   asio_service_sender.Stop();
   asio_service_listener.Stop();
 }
