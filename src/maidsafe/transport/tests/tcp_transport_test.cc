@@ -150,7 +150,7 @@ void reset() {
   boost::condition_variable * cond_var_;
 };
 
-void SendFlooding(size_t message_count, size_t message_size) {
+void SendFlooding(uint32_t message_count, size_t message_size) {
   std::string messages(message_size, 'A');
   boost::mutex mutex;
   boost::condition_variable cond;
