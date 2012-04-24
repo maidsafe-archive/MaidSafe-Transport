@@ -93,11 +93,11 @@ void TestMessageHandler::DoOnRequestReceived(const std::string &request,
   Sleep(boost::posix_time::milliseconds(10));
   boost::mutex::scoped_lock lock(mutex_);
   requests_received_.push_back(std::make_pair(request, info));
-  *response = "Replied to " + request + " (Id = " + boost::lexical_cast<
-              std::string>(requests_received_.size()) + ")";
+  *response = "Replied to " + request.substr(0, 5) + " (Id = " +
+              boost::lexical_cast<std::string>(requests_received_.size()) + ")";
   responses_sent_.push_back(*response);
   *timeout = kStallTimeout;
-  DLOG(INFO) << this_id_ << " - Received request: \"" << request
+  DLOG(INFO) << this_id_ << " - Received request: \"" << request.substr(0, 5)
              << "\".  Responding with \"" << *response << "\"";
 }
 
@@ -108,8 +108,9 @@ void TestMessageHandler::DoTimeOutOnRequestReceived(const std::string &request,
   DLOG(INFO) << "Mocking a timedout response" << std::endl;
   boost::mutex::scoped_lock lock(mutex_);
   requests_received_.push_back(std::make_pair(request, info));
-  *response = "Timed out reply to " + request + " (Id = " + boost::lexical_cast<
-              std::string>(requests_received_.size()) + ")";
+  *response = "Timed out reply to " + request.substr(0, 5) +
+              " (Id = " +
+              boost::lexical_cast<std::string>(requests_received_.size()) + ")";
   responses_sent_.push_back(*response);
   lock.unlock();
   boost::this_thread::sleep(boost::posix_time::seconds(5));
@@ -124,7 +125,8 @@ void TestMessageHandler::DoOnResponseReceived(const std::string &request,
   *timeout = kImmediateTimeout;
   boost::mutex::scoped_lock lock(mutex_);
   responses_received_.push_back(std::make_pair(request, info));
-  DLOG(INFO) << this_id_ << " - Received response: \"" << request << "\"";
+  DLOG(INFO) << this_id_ << " - Received response: \"" << request.substr(0, 5)
+             << "\"";
   finished_ = true;
 }
 
@@ -636,6 +638,8 @@ TEST_F(RudpSingleTransportAPITest, BEH_BiDirectionCommunicate) {
   EXPECT_EQ(1, msgh_listener->responses_received().size());
   EXPECT_EQ(1, msgh_sender->requests_received().size());
   EXPECT_EQ(1, msgh_sender->responses_received().size());
+  listener->StopListening();
+  sender->StopListening();
 }
 
 TEST_F(RudpSingleTransportAPITest, BEH_BiDirectionDuplexCommunicate) {
@@ -693,6 +697,8 @@ TEST_F(RudpSingleTransportAPITest, BEH_BiDirectionDuplexCommunicate) {
   ASSERT_EQ(2, msgh_sender->responses_received().size());
   EXPECT_EQ(send_request, msgh_listener->requests_received()[0].first);
   EXPECT_EQ(listen_request, msgh_sender->responses_received()[0].first);
+  listener->StopListening();
+  sender->StopListening();
 }
 
 TEST_F(RudpSingleTransportAPITest, BEH_OneToOneSingleLargeMessage) {
@@ -737,6 +743,7 @@ TEST_F(RudpSingleTransportAPITest, BEH_OneToOneSeqMultipleLargeMessage) {
   ASSERT_EQ(size_t(5), msgh_sender->responses_received().size());
   ASSERT_EQ(msgh_listener->responses_sent().at(0),
             msgh_sender->responses_received().at(0).first);
+  listener->StopListening();
 }
 
 TEST_F(RudpSingleTransportAPITest, BEH_OneToOneSimMultipleLargeMessage) {
@@ -853,6 +860,7 @@ TEST_F(RudpSingleTransportAPITest, BEH_Connect) {
     condition.wait(lock);
     EXPECT_EQ(kSuccess, result);
   }
+  server->StopListening();
 }
 
 TEST_F(RudpSingleTransportAPITest, BEH_SlowSendSpeed) {
@@ -901,6 +909,7 @@ TEST_F(RudpSingleTransportAPITest, BEH_SlowSendSpeed) {
     }
     EXPECT_GT(3, waited_seconds);
   }
+  listener->StopListening();
 }
 
 TEST_F(RudpSingleTransportAPITest, BEH_SlowReceiveSpeed) {
@@ -949,6 +958,7 @@ TEST_F(RudpSingleTransportAPITest, BEH_SlowReceiveSpeed) {
     }
     EXPECT_GT(3, waited_seconds);
   }
+  listener->StopListening();
   RestoreRudpGlobalSettings();
 }
 

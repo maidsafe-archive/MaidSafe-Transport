@@ -129,7 +129,7 @@ void UdpTransport::Send(const std::string &data,
 
 void UdpTransport::DoSend(RequestPtr request) {
   // Open a socket for sending if we don't have one already.
-  if (!socket_) {
+  if (!socket_ || !socket_->is_open()) {
     socket_.reset(new ip::udp::socket(asio_service_));
     sender_endpoint_.reset(new ip::udp::endpoint);
     read_buffer_.reset(new std::vector<unsigned char>(0xffff));
@@ -281,6 +281,11 @@ void UdpTransport::DispatchMessage(const std::string &data,
                                       reply_to_id));
     strand_.dispatch(std::bind(&UdpTransport::DoSend,
                                shared_from_this(), request));
+  } else {
+    //  Closing Socket in case this was last outstanding request left.
+    if (!outstanding_requests_.size() && !listening_port_) {
+      strand_.dispatch(std::bind(&UdpTransport::CloseSocket, socket_));
+    }
   }
 }
 
@@ -293,6 +298,10 @@ void UdpTransport::HandleTimeout(uint64_t request_id,
                              (*request).second->Endpoint().port());
       outstanding_requests_.erase(request);
       (*on_error_)(kReceiveTimeout, peer_endpoint);
+      //  Closing Socket in case this was last outstanding request left.
+      if (!outstanding_requests_.size() && !listening_port_) {
+        strand_.dispatch(std::bind(&UdpTransport::CloseSocket, socket_));
+      }
     }
   }
 }

@@ -260,6 +260,13 @@ void RudpTransport::RemoveConnection(ConnectionPtr connection) {
 
 void RudpTransport::DoRemoveConnection(ConnectionPtr connection) {
   connections_.erase(connection);
+  //  Closing Multiplexer in case this was last connection left in transport.
+  if (connections_.empty() && !listening_port_) {
+    if (multiplexer_)
+      strand_.dispatch(std::bind(&RudpTransport::CloseMultiplexer,
+                                 multiplexer_));
+    multiplexer_.reset(new RudpMultiplexer(asio_service_));
+  }
 }
 
 }  // namespace transport
