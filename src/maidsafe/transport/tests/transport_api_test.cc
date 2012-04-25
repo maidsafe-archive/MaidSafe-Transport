@@ -93,12 +93,12 @@ void TestMessageHandler::DoOnRequestReceived(const std::string &request,
   Sleep(boost::posix_time::milliseconds(10));
   boost::mutex::scoped_lock lock(mutex_);
   requests_received_.push_back(std::make_pair(request, info));
-  *response = "Replied to " + request.substr(0, 5) + " (Id = " +
+  *response = "Replied to " + request + " (Id = " +
               boost::lexical_cast<std::string>(requests_received_.size()) + ")";
   responses_sent_.push_back(*response);
   *timeout = kStallTimeout;
   DLOG(INFO) << this_id_ << " - Received request: \"" << request.substr(0, 5)
-             << "\".  Responding with \"" << *response << "\"";
+             << "\".  Responding with \"" << (*response).substr(0, 5) << "\"";
 }
 
 void TestMessageHandler::DoTimeOutOnRequestReceived(const std::string &request,
@@ -108,8 +108,7 @@ void TestMessageHandler::DoTimeOutOnRequestReceived(const std::string &request,
   DLOG(INFO) << "Mocking a timedout response" << std::endl;
   boost::mutex::scoped_lock lock(mutex_);
   requests_received_.push_back(std::make_pair(request, info));
-  *response = "Timed out reply to " + request.substr(0, 5) +
-              " (Id = " +
+  *response = "Timed out reply to " + request + " (Id = " +
               boost::lexical_cast<std::string>(requests_received_.size()) + ")";
   responses_sent_.push_back(*response);
   lock.unlock();
