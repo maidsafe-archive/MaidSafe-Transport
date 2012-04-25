@@ -77,6 +77,29 @@ bptime::time_duration RudpParameters::client_connect_timeout(
 
 namespace test {
 
+namespace {
+// Struct to allow gracefull closure of listening transport in case of test
+// assertions.
+struct TransportContainer {
+  explicit TransportContainer(TransportPtr transport)
+      : transport(transport) {}
+
+  ~TransportContainer() {
+    if (transport)
+      transport->StopListening();
+  }
+
+  void reset() {
+    if (transport)
+      transport.reset();
+  }
+
+ private:
+  TransportPtr transport;
+};
+
+}  //  namespace anonymous
+
 TestMessageHandler::TestMessageHandler(const std::string &id)
     : finished_(false),
       this_id_(id),
@@ -460,6 +483,7 @@ TYPED_TEST_P(TransportAPITest, BEH_StartStopListening) {
 TYPED_TEST_P(TransportAPITest, BEH_Send) {
   TransportPtr sender(new TypeParam(this->asio_services_[0]->service()));
   TransportPtr listener(new TypeParam(this->asio_services_[0]->service()));
+  TransportContainer transport_container(listener);
   Port p(20000);
   while (listener->StartListening(Endpoint(kIP, p)) != kSuccess)
     ++p;
@@ -513,6 +537,8 @@ TYPED_TEST_P(TransportAPITest, BEH_Send) {
   ASSERT_EQ(request, msgh_listener->requests_received().at(1).first);
   ASSERT_EQ(size_t(2), msgh_listener->responses_sent().size());
   ASSERT_EQ(size_t(1), msgh_sender->responses_received().size());
+
+  transport_container.reset();
   listener->StopListening();
 }
 
@@ -655,6 +681,7 @@ TEST_F(RudpSingleTransportAPITest, BEH_BiDirectionDuplexCommunicate) {
 
   TransportPtr sender(new RudpTransport(this->asio_services_[0]->service()));
   TransportPtr listener(new RudpTransport(this->asio_services_[0]->service()));
+  TransportContainer listener_container(listener), sender_container(sender);
   EXPECT_EQ(kSuccess, sender->StartListening(Endpoint(kIP, 2000)));
   EXPECT_EQ(kSuccess, listener->StartListening(Endpoint(kIP, 2001)));
   TestMessageHandlerPtr msgh_sender(new TestMessageHandler("Sender"));
@@ -696,6 +723,9 @@ TEST_F(RudpSingleTransportAPITest, BEH_BiDirectionDuplexCommunicate) {
   ASSERT_EQ(2, msgh_sender->responses_received().size());
   EXPECT_EQ(send_request, msgh_listener->requests_received()[0].first);
   EXPECT_EQ(listen_request, msgh_sender->responses_received()[0].first);
+
+  listener_container.reset();
+  sender_container.reset();
   listener->StopListening();
   sender->StopListening();
 }
@@ -710,6 +740,8 @@ TEST_F(RudpSingleTransportAPITest, BEH_OneToOneSingleLargeMessage) {
 TEST_F(RudpSingleTransportAPITest, BEH_OneToOneSeqMultipleLargeMessage) {
   TransportPtr sender(new RudpTransport(this->asio_services_[0]->service()));
   TransportPtr listener(new RudpTransport(this->asio_services_[0]->service()));
+  TransportContainer transport_container(listener);
+
   EXPECT_EQ(kSuccess, listener->StartListening(Endpoint(kIP, 2001)));
   TestMessageHandlerPtr msgh_sender(new TestMessageHandler("Sender"));
   TestMessageHandlerPtr msgh_listener(new TestMessageHandler("listener"));
@@ -742,6 +774,8 @@ TEST_F(RudpSingleTransportAPITest, BEH_OneToOneSeqMultipleLargeMessage) {
   ASSERT_EQ(size_t(5), msgh_sender->responses_received().size());
   ASSERT_EQ(msgh_listener->responses_sent().at(0),
             msgh_sender->responses_received().at(0).first);
+
+  transport_container.reset();
   listener->StopListening();
 }
 
@@ -762,6 +796,7 @@ TEST_F(RudpSingleTransportAPITest, BEH_DetectDroppedReceiver) {
 
   TransportPtr sender(new RudpTransport(this->asio_services_[0]->service()));
   TransportPtr listener(new RudpTransport(this->asio_services_[0]->service()));
+  TransportContainer transport_container(listener);
 
   EXPECT_EQ(kSuccess, listener->StartListening(Endpoint(kIP, 2000)));
   TestMessageHandlerPtr msgh_sender(new TestMessageHandler("Sender"));
@@ -789,6 +824,8 @@ TEST_F(RudpSingleTransportAPITest, BEH_DetectDroppedReceiver) {
     }
     EXPECT_GT(10, waited_seconds);
   }
+
+  transport_container.reset();
   listener->StopListening();
 }
 
@@ -798,6 +835,8 @@ TEST_F(RudpSingleTransportAPITest, BEH_DetectDroppedSender) {
 
   TransportPtr sender(new RudpTransport(this->asio_services_[0]->service()));
   TransportPtr listener(new RudpTransport(this->asio_services_[0]->service()));
+  TransportContainer transport_container(listener);
+
   EXPECT_EQ(kSuccess, listener->StartListening(Endpoint(kIP, 2000)));
   TestMessageHandlerPtr msgh_sender(new TestMessageHandler("Sender"));
   TestMessageHandlerPtr msgh_listener(new TestMessageHandler("listener"));
@@ -824,6 +863,8 @@ TEST_F(RudpSingleTransportAPITest, BEH_DetectDroppedSender) {
     }
     EXPECT_GT(10, waited_seconds);
   }
+
+  transport_container.reset();
   listener->StopListening();
 }
 
@@ -832,6 +873,7 @@ TEST_F(RudpSingleTransportAPITest, BEH_Connect) {
       new RudpTransport(this->asio_services_[0]->service()));
   std::shared_ptr<RudpTransport> server(
       new RudpTransport(this->asio_services_[0]->service()));
+  TransportContainer transport_container(server);
   Port port(RandomUint32() % 50000 + 1025);
   while (server->StartListening(Endpoint(kIP, port)) != kSuccess)
     port = RandomUint32() % 50000 + 1025;
@@ -861,6 +903,8 @@ TEST_F(RudpSingleTransportAPITest, BEH_Connect) {
     condition.wait(lock);
     EXPECT_EQ(kSuccess, result);
   }
+
+  transport_container.reset();
   server->StopListening();
 }
 
@@ -871,6 +915,8 @@ TEST_F(RudpSingleTransportAPITest, BEH_SlowSendSpeed) {
 
   TransportPtr sender(new RudpTransport(this->asio_services_[0]->service()));
   TransportPtr listener(new RudpTransport(this->asio_services_[0]->service()));
+  TransportContainer transport_container(listener);
+
   EXPECT_EQ(kSuccess, listener->StartListening(Endpoint(kIP, 2010)));
   TestMessageHandlerPtr msgh_sender(new TestMessageHandler("Sender"));
   TestMessageHandlerPtr msgh_listener(new TestMessageHandler("listener"));
@@ -910,6 +956,8 @@ TEST_F(RudpSingleTransportAPITest, BEH_SlowSendSpeed) {
     }
     EXPECT_GT(3, waited_seconds);
   }
+
+  transport_container.reset();
   listener->StopListening();
 }
 
@@ -920,6 +968,8 @@ TEST_F(RudpSingleTransportAPITest, BEH_SlowReceiveSpeed) {
 
   TransportPtr sender(new RudpTransport(this->asio_services_[0]->service()));
   TransportPtr listener(new RudpTransport(this->asio_services_[0]->service()));
+  TransportContainer transport_container(listener);
+
   EXPECT_EQ(kSuccess, listener->StartListening(Endpoint(kIP, 2100)));
   TestMessageHandlerPtr msgh_sender(new TestMessageHandler("Sender"));
   TestMessageHandlerPtr msgh_listener(new TestMessageHandler("listener"));
@@ -959,6 +1009,8 @@ TEST_F(RudpSingleTransportAPITest, BEH_SlowReceiveSpeed) {
     }
     EXPECT_GT(3, waited_seconds);
   }
+
+  transport_container.reset();
   listener->StopListening();
   RestoreRudpGlobalSettings();
 }
