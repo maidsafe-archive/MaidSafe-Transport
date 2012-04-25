@@ -140,6 +140,7 @@ void RudpConnection::HandleSimpleClientConnect(const bs::error_code &ec,
   } else {
     callback(kSuccess);
   }
+  Close();
 }
 
 void RudpConnection::StartSending(const std::string &data,

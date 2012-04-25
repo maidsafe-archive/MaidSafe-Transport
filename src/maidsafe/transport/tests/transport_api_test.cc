@@ -789,6 +789,7 @@ TEST_F(RudpSingleTransportAPITest, BEH_DetectDroppedReceiver) {
     }
     EXPECT_GT(10, waited_seconds);
   }
+  listener->StopListening();
 }
 
 TEST_F(RudpSingleTransportAPITest, BEH_DetectDroppedSender) {
@@ -823,6 +824,7 @@ TEST_F(RudpSingleTransportAPITest, BEH_DetectDroppedSender) {
     }
     EXPECT_GT(10, waited_seconds);
   }
+  listener->StopListening();
 }
 
 TEST_F(RudpSingleTransportAPITest, BEH_Connect) {

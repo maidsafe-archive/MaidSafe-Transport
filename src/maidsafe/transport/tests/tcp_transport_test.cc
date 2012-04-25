@@ -203,10 +203,10 @@ void SendFlooding(uint32_t message_count, size_t message_size) {
   for (uint32_t i(0); i != message_count; ++i) {
     sender->Send(messages, listener_endpoint, bptime::seconds(10));
   }
-  //  Waiting for 1 minute
+  //  Waiting for 2 minute
   {
     boost::mutex::scoped_lock lock(mutex);
-    EXPECT_TRUE(cond.timed_wait(lock, bptime::minutes(1), [&]() {
+    EXPECT_TRUE(cond.timed_wait(lock, bptime::minutes(2), [&]() {
                                 return done;
                                 }));  // NOLINT
   }
