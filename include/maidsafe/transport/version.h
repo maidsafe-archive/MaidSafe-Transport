@@ -28,22 +28,5 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef MAIDSAFE_TRANSPORT_VERSION_H_
 #define MAIDSAFE_TRANSPORT_VERSION_H_
 
-#define MAIDSAFE_TRANSPORT_VERSION 300
-
-#if defined CMAKE_MAIDSAFE_TRANSPORT_VERSION &&\
-            MAIDSAFE_TRANSPORT_VERSION != CMAKE_MAIDSAFE_TRANSPORT_VERSION
-#  error The project version has changed.  Re-run CMake.
-#endif
-
-#include "maidsafe/common/version.h"
-
-#define THIS_NEEDS_MAIDSAFE_COMMON_VERSION 1200
-#if MAIDSAFE_COMMON_VERSION < THIS_NEEDS_MAIDSAFE_COMMON_VERSION
-#  error This API is not compatible with the installed library.\
-    Please update the maidsafe-common library.
-#elif MAIDSAFE_COMMON_VERSION > THIS_NEEDS_MAIDSAFE_COMMON_VERSION
-#  error This API uses a newer version of the maidsafe-common library.\
-    Please update this project. (MAIDSAFE_COMMON_VERSION)
-#endif
 
 #endif  // MAIDSAFE_TRANSPORT_VERSION_H_

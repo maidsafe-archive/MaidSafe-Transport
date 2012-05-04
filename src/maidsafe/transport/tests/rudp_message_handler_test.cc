@@ -28,7 +28,7 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "boost/lexical_cast.hpp"
 #include "boost/thread/mutex.hpp"
 #include "boost/thread/thread.hpp"
-
+#include "boost/bind.hpp"
 #include "maidsafe/common/test.h"
 #include "maidsafe/common/crypto.h"
 #include "maidsafe/common/rsa.h"
@@ -494,7 +494,7 @@ TEST_F(RudpMessageHandlerTest, BEH_ThreadedMessageHandling) {
   boost::thread_group thg;
   for (uint8_t n = 0; n < thread_count; ++n) {
     uint16_t rounds((RandomUint32() % 5) + 4);
-    thg.create_thread(std::bind(&RudpMessageHandlerTest::ExecuteThread,
+    thg.create_thread(boost::bind(&RudpMessageHandlerTest::ExecuteThread,
                                 this, messages, rounds));
     total_messages += rounds;
   }

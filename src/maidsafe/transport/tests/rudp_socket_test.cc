@@ -29,7 +29,8 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <functional>
 #include <vector>
-
+#include "boost/bind/bind.hpp"
+#include "boost/bind/placeholders.hpp"
 #include "maidsafe/common/test.h"
 #include "maidsafe/transport/log.h"
 #include "maidsafe/transport/rudp_acceptor.h"
@@ -51,11 +52,13 @@ const size_t kBufferSize = 1024 * 1024;
 const size_t kIterations = 100;
 
 void dispatch_handler(const bs::error_code &ec, RudpMultiplexer *muxer) {
-  if (!ec) muxer->AsyncDispatch(std::bind(&dispatch_handler, args::_1, muxer));
+  if (!ec) muxer->AsyncDispatch([&] (const bs::error_code &e) 
+  { return dispatch_handler(ec, muxer); } );
 }
 
 void tick_handler(const bs::error_code &ec, RudpSocket *sock) {
-  if (!ec) sock->AsyncTick(std::bind(&tick_handler, args::_1, sock));
+  if (!ec) sock->AsyncTick([&] (const bs::error_code &ec)
+                    { tick_handler(ec, sock); } );
 }
 
 void handler1(const bs::error_code &ec, bs::error_code *out_ec) {
@@ -76,19 +79,19 @@ TEST(RudpSocketTest, BEH_Socket) {
   condition = client_multiplexer.Open(ip::udp::v4());
   ASSERT_EQ(kSuccess, condition);
 
-  server_multiplexer.AsyncDispatch(std::bind(&dispatch_handler, args::_1,
+  server_multiplexer.AsyncDispatch(boost::bind(&dispatch_handler, _1,
                                              &server_multiplexer));
 
 
   RudpAcceptor server_acceptor(server_multiplexer);
   RudpSocket server_socket(server_multiplexer);
   server_ec = asio::error::would_block;
-  server_acceptor.AsyncAccept(server_socket, std::bind(&handler1, args::_1,
+  server_acceptor.AsyncAccept(server_socket, boost::bind(&handler1, _1,
                                                        &server_ec));
 
   RudpSocket client_socket(client_multiplexer);
   client_ec = asio::error::would_block;
-  client_socket.AsyncConnect(server_endpoint, std::bind(&handler1, args::_1,
+  client_socket.AsyncConnect(server_endpoint, boost::bind(&handler1, _1,
                                                         &client_ec));
 
   do {
@@ -97,10 +100,10 @@ TEST(RudpSocketTest, BEH_Socket) {
   ASSERT_TRUE(!server_ec);
 
   server_ec = asio::error::would_block;
-  client_multiplexer.AsyncDispatch(std::bind(&dispatch_handler, args::_1,
+  client_multiplexer.AsyncDispatch(boost::bind(&dispatch_handler, _1,
                                              &client_multiplexer));
 
-  server_socket.AsyncConnect(std::bind(&handler1, args::_1, &server_ec));
+  server_socket.AsyncConnect(boost::bind(&handler1, _1, &server_ec));
 
   do {
     io_service.run_one();
@@ -111,20 +114,20 @@ TEST(RudpSocketTest, BEH_Socket) {
   ASSERT_TRUE(!client_ec);
   ASSERT_TRUE(client_socket.IsOpen());
 
-  server_socket.AsyncTick(std::bind(&tick_handler, args::_1, &server_socket));
+  server_socket.AsyncTick(boost::bind(&tick_handler, _1, &server_socket));
 
-  client_socket.AsyncTick(std::bind(&tick_handler, args::_1, &client_socket));
+  client_socket.AsyncTick(boost::bind(&tick_handler, _1, &client_socket));
 
   for (size_t i = 0; i < kIterations; ++i) {
     std::vector<unsigned char> server_buffer(kBufferSize);
     server_ec = asio::error::would_block;
     server_socket.AsyncRead(asio::buffer(server_buffer), kBufferSize,
-                            std::bind(&handler1, args::_1, &server_ec));
+                            boost::bind(&handler1, _1, &server_ec));
 
     std::vector<unsigned char> client_buffer(kBufferSize, 'A');
     client_ec = asio::error::would_block;
     client_socket.AsyncWrite(asio::buffer(client_buffer),
-                            std::bind(&handler1, args::_1, &client_ec));
+                            boost::bind(&handler1, _1, &client_ec));
 
     do {
       io_service.run_one();
@@ -135,10 +138,10 @@ TEST(RudpSocketTest, BEH_Socket) {
   }
 
   server_ec = asio::error::would_block;
-  server_socket.AsyncFlush(std::bind(&handler1, args::_1, &server_ec));
+  server_socket.AsyncFlush(boost::bind(&handler1, _1, &server_ec));
 
   client_ec = asio::error::would_block;
-  client_socket.AsyncFlush(std::bind(&handler1, args::_1, &client_ec));
+  client_socket.AsyncFlush(boost::bind(&handler1, _1, &client_ec));
 
   do {
     io_service.run_one();

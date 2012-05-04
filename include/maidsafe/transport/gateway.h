@@ -33,11 +33,9 @@ Created by Julian Cain on 11/3/09.
 
 #include <vector>
 #include "boost/asio.hpp"
-#include "maidsafe/common/platform_config.h"
 #include "maidsafe/transport/network_interface.h"
 
-#if (defined(MAIDSAFE_APPLE) || defined(MAIDSAFE_POSIX) || defined(__MACH__)) \
-    && !defined(MAIDSAFE_LINUX)
+#if (defined(MAIDSAFE_APPLE) || defined(MAIDSAFE_POSIX) && !defined(MAIDSAFE_LINUX))
 struct rt_msghdr;
 #elif defined(MAIDSAFE_LINUX)
 struct nlmsghdr;

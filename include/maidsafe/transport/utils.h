@@ -1,4 +1,4 @@
-/* Copyright (c) 2011 maidsafe.net limited
+/* Copyright (c) 2009 maidsafe.net limited
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification,
@@ -25,50 +25,41 @@ TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#ifndef MAIDSAFE_TRANSPORT_NAT_DETECTION_H_
-#define MAIDSAFE_TRANSPORT_NAT_DETECTION_H_
+/*******************************************************************************
+ * NOTE: This header is unlikely to have any breaking changes applied.         *
+ *       However, it should not be regarded as finalised until this notice is  *
+ *       removed.                                                              *
+ ******************************************************************************/
 
+#ifndef MAIDSAFE_TRANSPORT_UTILS_H_
+#define MAIDSAFE_TRANSPORT_UTILS_H_
+
+#include <string>
 #include <vector>
+#include "maidsafe/transport/transport.h"
 
-#include "boost/thread/condition_variable.hpp"
-#include "boost/thread/mutex.hpp"
-
-#include "maidsafe/transport/contact.h"
-
-#if MAIDSAFE_TRANSPORT_VERSION != 300
-#  error This API is not compatible with the installed library.\
-    Please update the maidsafe-transport library.
-#endif
 
 namespace maidsafe {
 
 namespace transport {
 
-class NatDetectionRpcs;
-class RudpMessageHandler;
+// Convert an IP in ASCII format to IPv4 or IPv6 bytes
+std::string IpAsciiToBytes(const std::string &decimal_ip);
 
-class NatDetection {
-  typedef std::shared_ptr<RudpMessageHandler> MessageHandlerPtr;
- public:
-  NatDetection();
-  void Detect(const std::vector<Contact>& contacts,
-              const bool &full,
-              std::shared_ptr<Transport> transport,
-              MessageHandlerPtr message_handler,
-              NatType* nat_type,
-              Endpoint *rendezvous_endpoint);
- protected:
-  std::shared_ptr<NatDetectionRpcs> rpcs_;
+// Convert an IPv4 or IPv6 in bytes format to ASCII format
+std::string IpBytesToAscii(const std::string &bytes_ip);
 
- private:
-  void DetectCallback(const int &nat_type, const TransportDetails &details,
-                      NatType *out_nat_type, TransportPtr,
-                      Endpoint *rendezvous_endpoint,
-                      boost::condition_variable *cond_var);
-};
+// Convert an internet network address into dotted string format.
+void IpNetToAscii(uint32_t address, char *ip_buffer);
+
+// Convert a dotted string format internet address into Ipv4 format.
+uint32_t IpAsciiToNet(const char *buffer);
+
+// Return all local addresses
+std::vector<IP> GetLocalAddresses();
 
 }  // namespace transport
 
 }  // namespace maidsafe
 
-#endif  // MAIDSAFE_TRANSPORT_NAT_DETECTION_H_
+#endif  // MAIDSAFE_TRANSPORT_UTILS_H_

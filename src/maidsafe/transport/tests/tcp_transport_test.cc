@@ -32,6 +32,7 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "maidsafe/common/asio_service.h"
 #include "maidsafe/common/test.h"
 #include "maidsafe/common/utils.h"
+#include "maidsafe/transport/transport.h"
 
 #include "maidsafe/transport/log.h"
 
@@ -162,17 +163,17 @@ void SendFlooding(uint32_t message_count, size_t message_size) {
   asio_service_listener.Start(20);
 
   //  Creating transports
-  TransportPtr sender(new TcpTransport(asio_service_sender.service()));
-  TransportPtr listener(new TcpTransport(asio_service_listener.service()));
+  maidsafe::transport::TcpTransport sender(asio_service_sender.service());
+  maidsafe::transport::TcpTransport listener(asio_service_listener.service());
   Endpoint endpoint(kIP, 0);
   TransportCondition result(kError);
   for (uint16_t port(8000); port != 9000; ++port) {
     endpoint.port = port;
-    result = listener->StartListening(endpoint);
+    result = listener.StartListening(endpoint);
     if (transport::kSuccess == result) {
       break;
     } else {
-      listener->StopListening();
+      listener.StopListening();
     }
   }
 
@@ -180,16 +181,16 @@ void SendFlooding(uint32_t message_count, size_t message_size) {
   TcpTestMessageHandler listener_msg_handler("listener");
   TcpTestMessageHandler sender_msg_handler("sender");
 
-  sender->on_message_received()->connect(boost::bind(
+  sender.on_message_received()->connect(boost::bind(
       &TcpTestMessageHandler::DoOnResponseReceived, &sender_msg_handler, _1, _2,
       _3, _4));
-  sender->on_error()->connect(
+  sender.on_error()->connect(
       boost::bind(&TcpTestMessageHandler::DoOnError, &sender_msg_handler, _1));
 
-  listener->on_message_received()->connect(boost::bind(
+  listener.on_message_received()->connect(boost::bind(
       &TcpTestMessageHandler::DoOnRequestReceived, &listener_msg_handler, _1,
       _2, _3, _4));
-  listener->on_error()->connect(
+  listener.on_error()->connect(
       boost::bind(&TcpTestMessageHandler::DoOnError, &listener_msg_handler,
       _1));
 
@@ -197,11 +198,11 @@ void SendFlooding(uint32_t message_count, size_t message_size) {
   sender_msg_handler.SetUpCompletionTrigger(message_count, &done, &mutex,
                                             &cond);
 
-  Endpoint listener_endpoint(listener->transport_details().endpoint);
+  Endpoint listener_endpoint(listener.transport_details().endpoint);
 
   // Sending messages
   for (uint32_t i(0); i != message_count; ++i) {
-    sender->Send(messages, listener_endpoint, bptime::seconds(10));
+    sender.Send(messages, listener_endpoint, bptime::seconds(10));
   }
   //  Waiting for 2 minute
   {
@@ -221,7 +222,7 @@ void SendFlooding(uint32_t message_count, size_t message_size) {
   EXPECT_EQ(message_count, sender_msg_handler.response_recvd_count() +
             sender_msg_handler.error_count());
 
-  listener->StopListening();
+  listener.StopListening();
 
   asio_service_sender.Stop();
   asio_service_listener.Stop();

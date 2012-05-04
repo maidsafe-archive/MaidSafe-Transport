@@ -34,11 +34,12 @@
 #==============================================================================#
 
 
-set(MS_PROJECT_NAME maidsafe_transport)
+set(MS_PROJECT_NAME transport)
 
 cmake_minimum_required(VERSION 2.8.4 FATAL_ERROR)
 message("================================================================================\n")
-
+include(../../cmake_modules/maidsafe_standard_setup.cmake)
+include_directories(${common_SOURCE_DIR}/include)
 get_filename_component(CMAKE_BUILD_TYPE_DIR ${CMAKE_BINARY_DIR} NAME)
 
 # Variable MSVC is not set until after "PROJECT" command below
@@ -63,22 +64,12 @@ endif()
 
 set(CMAKE_BUILD_TYPE ${CMAKE_BUILD_TYPE_DIR} CACHE INTERNAL "Except for MSVC, the build type is set by running cmake from the appropriate build subdirectory e.g. for a Debug build, \"cd build/Linux/Debug && cmake ../../..\"." FORCE)
 
-
-###################################################################################################
-# MaidSafe Common library search                                                                  #
-###################################################################################################
-set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${PROJECT_SOURCE_DIR}/build)
-include(maidsafe_find_common)
-
-
 ###################################################################################################
 # Standard setup                                                                                  #
 ###################################################################################################
 set(PROTO_SOURCE_DIR ${PROJECT_SOURCE_DIR}/src)
 set(PROTO_FILES "maidsafe/transport/transport.proto")
 include(maidsafe_standard_setup)
-handle_versions(${PROJECT_SOURCE_DIR}/src/maidsafe/transport/version.h)
-
 
 ###################################################################################################
 # Set up all files as GLOBs                                                                       #
@@ -162,10 +153,8 @@ ms_add_executable(TESTtransport Tests ${ALL_FILES_TEST_TRANSPORT_DIR})
 # ms_add_executable(TESTnatpmp Tests ${ALL_FILES_TEST_MAIN} ${ALL_FILES_TEST_NATPMP_DIR})
 # ms_add_executable(TESTupnp Tests ${ALL_FILES_TEST_MAIN} ${ALL_FILES_TEST_UPNP_DIR})
 
-target_link_libraries(maidsafe_transport_static
-                        maidsafe_common_static
-                        protobuf_static)
-target_link_libraries(TESTtransport maidsafe_transport_static gtest_static gmock_static)
+target_link_libraries(maidsafe_transport  maidsafe_common)
+target_link_libraries(TESTtransport maidsafe_transport)
 # target_link_libraries(TESTnatpmp maidsafe_transport_static gtest_static)
 # target_link_libraries(TESTupnp maidsafe_transport_static gtest_static)
 
@@ -206,26 +195,26 @@ add_coverage_exclude(upnp/)
 add_coverage_exclude(transport.pb.cc)
 
 
-###################################################################################################
-# Install details                                                                                 #
-###################################################################################################
-final_message()
-rename_outdated_built_exes()
-
-set(MAIDSAFE_TRANSPORT_INSTALL_FILES
-      ${PROJECT_SOURCE_DIR}/src/maidsafe/transport/transport.h
-      ${PROJECT_SOURCE_DIR}/src/maidsafe/transport/version.h
-      ${PROJECT_SOURCE_DIR}/src/maidsafe/transport/message_handler.h
-      ${PROJECT_SOURCE_DIR}/src/maidsafe/transport/contact.h
-      ${PROJECT_SOURCE_DIR}/src/maidsafe/transport/tcp_transport.h
-      ${PROJECT_SOURCE_DIR}/src/maidsafe/transport/udp_transport.h
-      ${PROJECT_SOURCE_DIR}/src/maidsafe/transport/rudp_transport.h
-      ${PROJECT_SOURCE_DIR}/src/maidsafe/transport/rudp_parameters.h
-      ${PROJECT_SOURCE_DIR}/src/maidsafe/transport/rudp_message_handler.h
-      ${PROJECT_SOURCE_DIR}/src/maidsafe/transport/nat_detection.h
-      ${PROJECT_SOURCE_DIR}/src/maidsafe/transport/nat_traversal.h
-      ${PROJECT_SOURCE_DIR}/src/maidsafe/transport/utils.h)  # TODO - remove utils.h once NAT detection is implemented and this is not #included by node_container.h
-
-ms_install_libs(maidsafe_transport_static)
-ms_install_headers(transport ${MAIDSAFE_TRANSPORT_INSTALL_FILES})
-ms_install_export()
+# ###################################################################################################
+# # Install details                                                                                 #
+# ###################################################################################################
+# final_message()
+# rename_outdated_built_exes()
+# 
+# set(MAIDSAFE_TRANSPORT_INSTALL_FILES
+#       ${PROJECT_SOURCE_DIR}/src/maidsafe/transport/transport.h
+#       ${PROJECT_SOURCE_DIR}/src/maidsafe/transport/version.h
+#       ${PROJECT_SOURCE_DIR}/src/maidsafe/transport/message_handler.h
+#       ${PROJECT_SOURCE_DIR}/src/maidsafe/transport/contact.h
+#       ${PROJECT_SOURCE_DIR}/src/maidsafe/transport/tcp_transport.h
+#       ${PROJECT_SOURCE_DIR}/src/maidsafe/transport/udp_transport.h
+#       ${PROJECT_SOURCE_DIR}/src/maidsafe/transport/rudp_transport.h
+#       ${PROJECT_SOURCE_DIR}/src/maidsafe/transport/rudp_parameters.h
+#       ${PROJECT_SOURCE_DIR}/src/maidsafe/transport/rudp_message_handler.h
+#       ${PROJECT_SOURCE_DIR}/src/maidsafe/transport/nat_detection.h
+#       ${PROJECT_SOURCE_DIR}/src/maidsafe/transport/nat_traversal.h
+#       ${PROJECT_SOURCE_DIR}/src/maidsafe/transport/utils.h)  # TODO - remove utils.h once NAT detection is implemented and this is not #included by node_container.h
+# 
+# ms_install_libs(maidsafe_transport_static)
+# ms_install_headers(transport ${MAIDSAFE_TRANSPORT_INSTALL_FILES})
+# ms_install_export()

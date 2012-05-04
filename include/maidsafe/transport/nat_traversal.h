@@ -1,4 +1,4 @@
-/* Copyright (c) 2009 maidsafe.net limited
+/* Copyright (c) 2011 maidsafe.net limited
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification,
@@ -25,51 +25,50 @@ TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-/*******************************************************************************
- * NOTE: This header is unlikely to have any breaking changes applied.         *
- *       However, it should not be regarded as finalised until this notice is  *
- *       removed.                                                              *
- ******************************************************************************/
+#ifndef MAIDSAFE_TRANSPORT_NAT_TRAVERSAL_H_
+#define MAIDSAFE_TRANSPORT_NAT_TRAVERSAL_H_
 
-#ifndef MAIDSAFE_TRANSPORT_UTILS_H_
-#define MAIDSAFE_TRANSPORT_UTILS_H_
-
-#include <string>
-#include <vector>
+#include "boost/asio/deadline_timer.hpp"
+#include "boost/thread/mutex.hpp"
+#include "boost/thread/condition_variable.hpp"
 #include "maidsafe/transport/transport.h"
-
-// TODO(Fraser#5#): 2011-08-30 - remove #include version.h and #if block once
-//                  NAT detection is implemented and this is file is not
-//                  #included by node_container.h
-
-#include "maidsafe/transport/version.h"
-
-#if MAIDSAFE_TRANSPORT_VERSION != 300
-#  error This API is not compatible with the installed library.\
-    Please update the maidsafe-transport library.
-#endif
 
 namespace maidsafe {
 
 namespace transport {
 
-// Convert an IP in ASCII format to IPv4 or IPv6 bytes
-std::string IpAsciiToBytes(const std::string &decimal_ip);
+class NatDetectionRpcs;
+class RudpMessageHandler;
 
-// Convert an IPv4 or IPv6 in bytes format to ASCII format
-std::string IpBytesToAscii(const std::string &bytes_ip);
+typedef std::function<void(const TransportCondition&)> KeepAliveFunctor;
 
-// Convert an internet network address into dotted string format.
-void IpNetToAscii(uint32_t address, char *ip_buffer);
+class NatTraversal {
+  typedef std::shared_ptr<RudpMessageHandler> MessageHandlerPtr;
+ public:
+  NatTraversal(boost::asio::io_service &asio_service, // NOLINT
+               const Timeout &interval,
+               const Timeout &timeout,
+               TransportPtr transport,
+               MessageHandlerPtr message_handler);
+  void KeepAlive(const Endpoint &endpoint, KeepAliveFunctor callback);
+  void KeepAliveCallback(const TransportCondition &condition,
+                         const boost::system::error_code& ec);
 
-// Convert a dotted string format internet address into Ipv4 format.
-uint32_t IpAsciiToNet(const char *buffer);
+ private:
+  void DoKeepAlive();
 
-// Return all local addresses
-std::vector<IP> GetLocalAddresses();
+  std::shared_ptr<NatDetectionRpcs> rpcs_;
+  boost::asio::io_service &asio_service_;
+  Timeout timeout_, interval_;
+  boost::asio::deadline_timer timer_;
+  TransportPtr transport_;
+  MessageHandlerPtr message_handler_;
+  KeepAliveFunctor callback_;
+  Endpoint endpoint_;
+};
 
 }  // namespace transport
 
 }  // namespace maidsafe
 
-#endif  // MAIDSAFE_TRANSPORT_UTILS_H_
+#endif  // MAIDSAFE_TRANSPORT_NAT_TRAVERSAL_H_

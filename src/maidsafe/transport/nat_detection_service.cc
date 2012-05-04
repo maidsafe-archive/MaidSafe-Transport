@@ -33,6 +33,7 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "maidsafe/transport/rudp_transport.h"
 #include "maidsafe/transport/rudp_message_handler.h"
 #include "maidsafe/transport/transport_pb.h"
+#include "maidsafe/transport/transport.h"
 
 namespace args = std::placeholders;
 
@@ -105,15 +106,17 @@ void NatDetectionService::NatDetection(
     bool result(false);
     TransportCondition condition;
     boost::signals2::connection proxy_connect =
-        message_handler_->on_proxy_connect_response()->connect(
-            std::bind(&NatDetectionService::ProxyConnectResponse, this,
-                      kSuccess, proxy, args::_1, proxy, &condition_variable,
-                      &condition, &result));
+        message_handler_->on_proxy_connect_response()->connect([&]
+         (const protobuf::ProxyConnectResponse &response)
+	  { return (NatDetectionService::ProxyConnectResponse(
+                      kSuccess, proxy, response, proxy, &condition_variable,
+                      &condition, &result)); } );
     boost::signals2::connection error =
-        message_handler_->on_error()->connect(
-            std::bind(&NatDetectionService::ProxyConnectResponse, this,
-                      args::_1, args::_2, protobuf::ProxyConnectResponse(),
-                      proxy, &condition_variable, &condition, &result));
+        message_handler_->on_error()->connect([&]
+            (const TransportCondition &transport_condition, const Endpoint &remote_endpoint)
+	    { return NatDetectionService::ProxyConnectResponse(
+                      transport_condition, remote_endpoint, protobuf::ProxyConnectResponse(),
+                      proxy, &condition_variable, &condition, &result); } );
     transport->on_message_received()->connect(
           OnMessageReceived::element_type::slot_type(
               &RudpMessageHandler::OnMessageReceived, message_handler_.get(),

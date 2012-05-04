@@ -27,13 +27,10 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <vector>
 #include <string>
-
 #include "maidsafe/transport/nat_detection_rpcs.h"
 #include "maidsafe/transport/contact.h"
 #include "maidsafe/transport/message_handler.h"
 
-
-namespace args = std::placeholders;
 
 namespace maidsafe {
 
@@ -68,14 +65,18 @@ void NatDetectionRpcs::DoNatDetection(const std::vector<Contact> &candidates,
                                       const bool &full,
                                       NatResultFunctor callback,
                                       const size_t &index) {
-  message_handler->on_nat_detection_response()->connect(
-      std::bind(&NatDetectionRpcs::NatDetectionCallback, this,
-                transport::kSuccess, args::_1, candidates, callback, transport,
-                message_handler, request, full, index));
-  message_handler->on_error()->connect(
-      std::bind(&NatDetectionRpcs::NatDetectionCallback, this, args::_1,
+  message_handler->on_nat_detection_response()->connect([=]
+       (const const protobuf::NatDetectionResponse &response)
+       { return NatDetectionRpcs::NatDetectionCallback(
+                transport::kSuccess, response, candidates, callback, transport,
+                message_handler, request, full, index); } );
+  //TODO(dirvine)
+  message_handler->on_error()->connect([&]
+    (const TransportCondition &result,  const Endpoint &remote_endpoint)
+      { return NatDetectionRpcs::NatDetectionCallback(result,
                 protobuf::NatDetectionResponse(), candidates, callback,
-                transport, message_handler, request, full, index));
+                transport, message_handler, request, full, index); } );
+  
   transport->Send(request, candidates[index].endpoint(),
                    transport::kDefaultInitialTimeout);
 }
@@ -86,7 +87,7 @@ void NatDetectionRpcs::KeepAlive(const Endpoint endpoint,
                                  MessageHandlerPtr message_handler,
                                  KeepAliveFunctor callback) {
   message_handler->on_error()->connect(
-      std::bind(&NatDetectionRpcs::KeepAliveCallback, this, args::_1,
+      boost::bind(&NatDetectionRpcs::KeepAliveCallback, this, _1,
       callback));
   // TODO(Prakash): adjust timeout parameter of RUDP if needed
   transport->Send("Alive", endpoint, kImmediateTimeout);

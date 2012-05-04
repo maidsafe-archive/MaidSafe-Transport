@@ -44,13 +44,6 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "boost/serialization/nvp.hpp"
 #include "boost/signals2/signal.hpp"
 
-#include "maidsafe/transport/version.h"
-
-
-#if MAIDSAFE_TRANSPORT_VERSION != 300
-#  error This API is not compatible with the installed library.\
-    Please update the maidsafe-transport library.
-#endif
 
 namespace bs2 = boost::signals2;
 namespace bptime = boost::posix_time;

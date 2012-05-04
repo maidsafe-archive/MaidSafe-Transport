@@ -139,7 +139,7 @@ void RudpReceiver::HandleAckOfAck(const RudpAckOfAckPacket &packet) {
     Ack &a = acks_[ack_seqnum];
     boost::posix_time::time_duration rtt = tick_timer_.Now() - a.send_time;
     boost::uint64_t rtt_us = rtt.total_microseconds();
-    if (rtt_us < UINT32_MAX) {
+    if (rtt_us < std::numeric_limits<uint32_t>::max()  ) {
       congestion_control_.OnAckOfAck(static_cast<boost::uint32_t>(rtt_us));
     }
   }
