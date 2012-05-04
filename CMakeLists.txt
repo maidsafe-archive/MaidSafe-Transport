@@ -69,7 +69,7 @@ set(CMAKE_BUILD_TYPE ${CMAKE_BUILD_TYPE_DIR} CACHE INTERNAL "Except for MSVC, th
 ###################################################################################################
 set(PROTO_SOURCE_DIR ${PROJECT_SOURCE_DIR}/src)
 set(PROTO_FILES "maidsafe/transport/transport.proto")
-include(maidsafe_standard_setup)
+include("${CMAKE_SOURCE_DIR}/cmake_modules/maidsafe_standard_setup.cmake")
 
 ###################################################################################################
 # Set up all files as GLOBs                                                                       #
