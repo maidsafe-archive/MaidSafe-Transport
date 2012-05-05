@@ -1,53 +1,30 @@
 #==============================================================================#
 #                                                                              #
-#  Copyright (c) 2011 MaidSafe.net limited                                     #
-#  All rights reserved.                                                        #
+#  Copyright (c) 2012 MaidSafe.net limited                                     #
 #                                                                              #
-#  Redistribution and use in source and binary forms, with or without          #
-#  modification, are permitted provided that the following conditions are met: #
+#  The following source code is property of MaidSafe.net limited and is not    #
+#  meant for external use.  The use of this code is governed by the license    #
+#  file licence.txt found in the root directory of this project and also on    #
+#  www.maidsafe.net.                                                           #
 #                                                                              #
-#      * Redistributions of source code must retain the above copyright        #
-#        notice, this list of conditions and the following disclaimer.         #
-#      * Redistributions in binary form must reproduce the above copyright     #
-#        notice, this list of conditions and the following disclaimer in the   #
-#        documentation and/or other materials provided with the distribution.  #
-#      * Neither the name of the maidsafe.net limited nor the names of its     #
-#        contributors may be used to endorse or promote products derived from  #
-#        this software without specific prior written permission.              #
-#                                                                              #
-#  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" #
-#  AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE   #
-#  IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE  #
-#  ARE DISCLAIMED.  IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE  #
-#  LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR         #
-#  CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF        #
-#  SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS    #
-#  INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN     #
-#  CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)     #
-#  ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE  #
-#  POSSIBILITY OF SUCH DAMAGE.                                                 #
-#                                                                              #
-#==============================================================================#
-#                                                                              #
-#  Written by maidsafe.net team                                                #
+#  You are not free to copy, amend or otherwise use this source code without   #
+#  the explicit written permission of the board of directors of MaidSafe.net.  #
 #                                                                              #
 #==============================================================================#
 
 
+set(CMAKE_DISABLE_SOURCE_CHANGES ON)
+set(CMAKE_DISABLE_IN_SOURCE_BUILD ON)
+
+cmake_minimum_required(VERSION 2.8.7 FATAL_ERROR)
 project(transport)
 
-cmake_minimum_required(VERSION 2.8.4 FATAL_ERROR)
-message("================================================================================\n")
-include(../../cmake_modules/maidsafe_standard_setup.cmake)
-include_directories(${common_SOURCE_DIR}/include)
-get_filename_component(CMAKE_BUILD_TYPE_DIR ${CMAKE_BINARY_DIR} NAME)
-
-###################################################################################################
-# Standard setup                                                                                  #
-###################################################################################################
 set(PROTO_SOURCE_DIR ${PROJECT_SOURCE_DIR}/src)
 set(PROTO_FILES "maidsafe/transport/transport.proto")
-include("${CMAKE_SOURCE_DIR}/cmake_modules/maidsafe_standard_setup.cmake")
+include(../../cmake_modules/maidsafe_standard_setup.cmake)
+
+include_directories(${common_SOURCE_DIR}/include)
+
 
 ###################################################################################################
 # Set up all files as GLOBs                                                                       #
@@ -126,35 +103,24 @@ source_group("Test Header Files" FILES ${HEADER_FILES_TEST_TRANSPORT_DIR})
 ###################################################################################################
 # Define MaidSafe libraries and executables                                                       #
 ###################################################################################################
-ms_add_static_library("transport" ${ALL_FILES})
+ms_add_static_library(transport ${ALL_FILES})
 ms_add_executable(TESTtransport Tests ${ALL_FILES_TEST_TRANSPORT_DIR})
 # ms_add_executable(TESTnatpmp Tests ${ALL_FILES_TEST_MAIN} ${ALL_FILES_TEST_NATPMP_DIR})
 # ms_add_executable(TESTupnp Tests ${ALL_FILES_TEST_MAIN} ${ALL_FILES_TEST_UPNP_DIR})
 
-target_link_libraries(transport  maidsafe_common)
-target_link_libraries(TESTtransport transport)
+target_link_libraries(maidsafe_transport maidsafe_common)
+target_link_libraries(TESTtransport maidsafe_transport)
 # target_link_libraries(TESTnatpmp maidsafe_transport_static gtest_static)
 # target_link_libraries(TESTupnp maidsafe_transport_static gtest_static)
+
+rename_outdated_built_exes()
 
 
 ###################################################################################################
 # Set compiler and linker flags                                                                   #
 ###################################################################################################
 include(maidsafe_standard_flags)
-
-if(MSVC)
-  # Warnings switched off for protocol buffer generated files and libupnp files
-  set_source_files_properties(${PROJECT_SOURCE_DIR}/src/maidsafe/transport/transport.pb.cc
-                              ${ALL_FILES_LIBUPNP_DIR}
-                                PROPERTIES COMPILE_FLAGS "/W0")
-elseif(UNIX)
-  file(GLOB PROTO_SOURCE_FILES "${PROJECT_SOURCE_DIR}/src/maidsafe/transport/*.pb.cc")
-#  set_source_files_properties(${PROJECT_SOURCE_DIR}/src/maidsafe/transport/tcp_connection.cc
-#                                PROPERTIES COMPILE_FLAGS "-Wno-effc++")
-  set_source_files_properties(${PROTO_SOURCE_FILES} PROPERTIES COMPILE_FLAGS "-w")
-endif()
-
-
+ms_disable_warnings(${PROJECT_SOURCE_DIR}/src/maidsafe/transport/transport.pb.cc ${ALL_FILES_LIBUPNP_DIR})
 
 
 ###################################################################################################
@@ -171,28 +137,3 @@ add_coverage_exclude(libupnp/)
 add_coverage_exclude(nat-pmp/)
 add_coverage_exclude(upnp/)
 add_coverage_exclude(transport.pb.cc)
-
-
-# ###################################################################################################
-# # Install details                                                                                 #
-# ###################################################################################################
-# final_message()
-# rename_outdated_built_exes()
-# 
-# set(MAIDSAFE_TRANSPORT_INSTALL_FILES
-#       ${PROJECT_SOURCE_DIR}/src/maidsafe/transport/transport.h
-#       ${PROJECT_SOURCE_DIR}/src/maidsafe/transport/version.h
-#       ${PROJECT_SOURCE_DIR}/src/maidsafe/transport/message_handler.h
-#       ${PROJECT_SOURCE_DIR}/src/maidsafe/transport/contact.h
-#       ${PROJECT_SOURCE_DIR}/src/maidsafe/transport/tcp_transport.h
-#       ${PROJECT_SOURCE_DIR}/src/maidsafe/transport/udp_transport.h
-#       ${PROJECT_SOURCE_DIR}/src/maidsafe/transport/rudp_transport.h
-#       ${PROJECT_SOURCE_DIR}/src/maidsafe/transport/rudp_parameters.h
-#       ${PROJECT_SOURCE_DIR}/src/maidsafe/transport/rudp_message_handler.h
-#       ${PROJECT_SOURCE_DIR}/src/maidsafe/transport/nat_detection.h
-#       ${PROJECT_SOURCE_DIR}/src/maidsafe/transport/nat_traversal.h
-#       ${PROJECT_SOURCE_DIR}/src/maidsafe/transport/utils.h)  # TODO - remove utils.h once NAT detection is implemented and this is not #included by node_container.h
-# 
-# ms_install_libs(maidsafe_transport_static)
-# ms_install_headers(transport ${MAIDSAFE_TRANSPORT_INSTALL_FILES})
-# ms_install_export()
