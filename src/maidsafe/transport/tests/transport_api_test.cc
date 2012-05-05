@@ -24,7 +24,7 @@ CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR
 TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
-/* TODO(dirvine) - re-enable this, problems with shared_ptr usage and parametisation 
+// TODO(dirvine) - re-enable this, problems with shared_ptr usage and parametisation 
 #include "maidsafe/transport/tests/transport_api_test.h"
 #include <functional>
 #ifdef __MSVC__
@@ -226,9 +226,9 @@ void TransportAPI<T>::SetupTransport(bool listen, Port lport) {
   if (listen) {
     TransportPtr transport1;
     if (count_ < 8)
-      transport1 = TransportPtr(new T(asio_services_[0]->service()));
+      transport1 = std::shared_ptr<T>(new T(asio_services_[0]->service()));
     else
-      transport1 = TransportPtr(new T(asio_services_[3]->service()));
+      transport1 = std::shared_ptr<T>(new T(asio_services_[3]->service()));
 
     if (lport != Port(0)) {
       EXPECT_EQ(kSuccess,
@@ -241,9 +241,9 @@ void TransportAPI<T>::SetupTransport(bool listen, Port lport) {
   } else {
     TransportPtr transport1;
     if (count_ < 8)
-      transport1 = TransportPtr(new T(asio_services_[1]->service()));
+      transport1 = std::shared_ptr<T>(new T(asio_services_[1]->service()));
     else
-      transport1 = TransportPtr(new T(asio_services_[2]->service()));
+      transport1 = std::shared_ptr<T>(new T(asio_services_[2]->service()));
     sending_transports_.push_back(transport1);
   }
   ++count_;
@@ -450,7 +450,7 @@ TYPED_TEST_P(TransportAPITest, BEH_StartStopListening) {
   Port port2(RandomUint32() % 64511 + 1025);
   while (port1 == port2)
     port2 = RandomUint32() % 64511 + 1025;
-  TransportPtr transport(new TypeParam(this->asio_services_[0]->service()));
+  std::shared_ptr<TypeParam> transport(new TypeParam(this->asio_services_[0]->service()));
   EXPECT_EQ(Port(0), transport->listening_port());
   EXPECT_EQ(kInvalidPort, transport->StartListening(Endpoint(kIP, 0)));
   int result(999);
@@ -484,8 +484,8 @@ TYPED_TEST_P(TransportAPITest, BEH_StartStopListening) {
 }
 
 TYPED_TEST_P(TransportAPITest, BEH_Send) {
-  TransportPtr sender(new TypeParam(this->asio_services_[0]->service()));
-  TransportPtr listener(new TypeParam(this->asio_services_[0]->service()));
+  std::shared_ptr<TypeParam> sender(new TypeParam(this->asio_services_[0]->service()));
+  std::shared_ptr<TypeParam> listener(new TypeParam(this->asio_services_[0]->service()));
   TransportContainer transport_container(listener);
   Port p(20000);
   while (listener->StartListening(Endpoint(kIP, p)) != kSuccess)
@@ -612,27 +612,29 @@ INSTANTIATE_TYPED_TEST_CASE_P(UDP, TransportAPITest, UdpTransport);
 
 
 TEST_F(RudpSingleTransportAPITest, BEH_BiDirectionCommunicate) {
-  maidsafe::transport::RudpTransport sender(this->asio_services_[0]->service());
-  maidsafe::transport::RudpTransport listener(this->asio_services_[0]->service());
-  EXPECT_EQ(kSuccess, sender.StartListening(Endpoint(kIP, 2000)));
-  EXPECT_EQ(kSuccess, listener.StartListening(Endpoint(kIP, 2001)));
+  RudpTransportPtr sender(std::make_shared<RudpTransport>(
+      this->asio_services_[0]->service()));
+  RudpTransportPtr listener(std::make_shared<RudpTransport>(
+      this->asio_services_[0]->service()));
+  EXPECT_EQ(kSuccess, sender->StartListening(Endpoint(kIP, 2000)));
+  EXPECT_EQ(kSuccess, listener->StartListening(Endpoint(kIP, 2001)));
   TestMessageHandlerPtr msgh_sender(new TestMessageHandler("Sender"));
   TestMessageHandlerPtr msgh_listener(new TestMessageHandler("listener"));
-  sender.on_error()->connect(
+  sender->on_error()->connect(
       boost::bind(&TestMessageHandler::DoOnError, msgh_sender, _1));
-  listener.on_error()->connect(
+  listener->on_error()->connect(
       boost::bind(&TestMessageHandler::DoOnError, msgh_listener, _1));
   {
     // Send from sender to listener
     auto sender_conn =
-        sender.on_message_received()->connect(
+        sender->on_message_received()->connect(
             boost::bind(&TestMessageHandler::DoOnResponseReceived, msgh_sender,
                         _1, _2, _3, _4));
     auto listener_conn =
-        listener.on_message_received()->connect(
+        listener->on_message_received()->connect(
             boost::bind(&TestMessageHandler::DoOnRequestReceived, msgh_listener,
                         _1, _2, _3, _4));
-    sender.Send("from sender", Endpoint(kIP, listener->listening_port()),
+    sender->Send("from sender", Endpoint(kIP, listener->listening_port()),
                  bptime::seconds(26));
     boost::this_thread::sleep(boost::posix_time::milliseconds(100));
     // Connections need to be disconnected to ensure in the later part of the
@@ -643,14 +645,14 @@ TEST_F(RudpSingleTransportAPITest, BEH_BiDirectionCommunicate) {
   {
     // Send from listener to sender
     auto sender_conn =
-        sender.on_message_received()->connect(
+        sender->on_message_received()->connect(
             boost::bind(&TestMessageHandler::DoOnRequestReceived, msgh_sender,
                         _1, _2, _3, _4));
     auto listener_conn =
-        listener.on_message_received()->connect(
+        listener->on_message_received()->connect(
             boost::bind(&TestMessageHandler::DoOnResponseReceived,
                         msgh_listener, _1, _2, _3, _4));
-    listener.Send("from listener", Endpoint(kIP, sender->listening_port()),
+    listener->Send("from listener", Endpoint(kIP, sender->listening_port()),
                  bptime::seconds(26));
     boost::this_thread::sleep(boost::posix_time::milliseconds(100));
   }
@@ -665,10 +667,10 @@ TEST_F(RudpSingleTransportAPITest, BEH_BiDirectionCommunicate) {
   EXPECT_EQ(1, msgh_listener->responses_received().size());
   EXPECT_EQ(1, msgh_sender->requests_received().size());
   EXPECT_EQ(1, msgh_sender->responses_received().size());
-  listener.StopListening();
-  sender.StopListening();
+  listener->StopListening();
+  sender->StopListening();
 }
-
+/*
 TEST_F(RudpSingleTransportAPITest, BEH_BiDirectionDuplexCommunicate) {
   // 8MB data to be sent both from client to server and server to client
   // simultaneously
@@ -1015,7 +1017,7 @@ TEST_F(RudpSingleTransportAPITest, BEH_SlowReceiveSpeed) {
   transport_container.reset();
   listener->StopListening();
   RestoreRudpGlobalSettings();
-}
+}*/
 
 INSTANTIATE_TEST_CASE_P(ConfigurableTraffic, RudpConfigurableTransportAPITest,
                         testing::Range(0, 3));
@@ -1032,4 +1034,3 @@ TEST_P(RudpConfigurableTransportAPITest, BEH_ConfigurableTraffic) {
 }  // namespace transport
 
 }  // namespace maidsafe
-*/

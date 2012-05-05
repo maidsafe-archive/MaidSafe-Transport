@@ -34,35 +34,13 @@
 #==============================================================================#
 
 
-set(MS_PROJECT_NAME transport)
+project(transport)
 
 cmake_minimum_required(VERSION 2.8.4 FATAL_ERROR)
 message("================================================================================\n")
 include(../../cmake_modules/maidsafe_standard_setup.cmake)
 include_directories(${common_SOURCE_DIR}/include)
 get_filename_component(CMAKE_BUILD_TYPE_DIR ${CMAKE_BINARY_DIR} NAME)
-
-# Variable MSVC is not set until after "PROJECT" command below
-if(CMAKE_BUILD_TYPE_DIR MATCHES "Win_MSVC")
-  set(CMAKE_BUILD_TYPE_DIR Release)
-elseif(CMAKE_BUILD_TYPE_DIR MATCHES "kdev")
-  set(CMAKE_BUILD_TYPE_DIR Debug)
-  set(KDEV 1)
-endif()
-
-if(NOT ${CMAKE_C_COMPILER_WORKS})
-  message(FATAL_ERROR "No generator previously specified.\nTo see a full list of generators, run:\n\tcmake --help\n")
-endif()
-
-# This "PROJECT" command resets CMAKE_BUILD_TYPE, hence it's copied from CMAKE_BUILD_TYPE_DIR which is set above.
-if((CMAKE_BUILD_TYPE_DIR MATCHES "Release") OR (DEFINED ${KDEV}))
-  project(${MS_PROJECT_NAME})
-else()
-  string(TOLOWER ${CMAKE_BUILD_TYPE_DIR} MS_PROJECT_NAME_APPENDIX)
-  project(${MS_PROJECT_NAME}_${MS_PROJECT_NAME_APPENDIX})
-endif()
-
-set(CMAKE_BUILD_TYPE ${CMAKE_BUILD_TYPE_DIR} CACHE INTERNAL "Except for MSVC, the build type is set by running cmake from the appropriate build subdirectory e.g. for a Debug build, \"cd build/Linux/Debug && cmake ../../..\"." FORCE)
 
 ###################################################################################################
 # Standard setup                                                                                  #
@@ -148,13 +126,13 @@ source_group("Test Header Files" FILES ${HEADER_FILES_TEST_TRANSPORT_DIR})
 ###################################################################################################
 # Define MaidSafe libraries and executables                                                       #
 ###################################################################################################
-ms_add_static_library(${MS_PROJECT_NAME} ${ALL_FILES})
+ms_add_static_library("transport" ${ALL_FILES})
 ms_add_executable(TESTtransport Tests ${ALL_FILES_TEST_TRANSPORT_DIR})
 # ms_add_executable(TESTnatpmp Tests ${ALL_FILES_TEST_MAIN} ${ALL_FILES_TEST_NATPMP_DIR})
 # ms_add_executable(TESTupnp Tests ${ALL_FILES_TEST_MAIN} ${ALL_FILES_TEST_UPNP_DIR})
 
-target_link_libraries(maidsafe_transport  maidsafe_common)
-target_link_libraries(TESTtransport maidsafe_transport)
+target_link_libraries(transport  maidsafe_common)
+target_link_libraries(TESTtransport transport)
 # target_link_libraries(TESTnatpmp maidsafe_transport_static gtest_static)
 # target_link_libraries(TESTupnp maidsafe_transport_static gtest_static)
 
