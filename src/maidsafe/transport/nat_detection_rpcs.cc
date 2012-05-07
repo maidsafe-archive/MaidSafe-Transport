@@ -66,12 +66,12 @@ void NatDetectionRpcs::DoNatDetection(const std::vector<Contact> &candidates,
                                       NatResultFunctor callback,
                                       const size_t &index) {
   message_handler->on_nat_detection_response()->connect([=]
-       (const const protobuf::NatDetectionResponse &response)
+       (const protobuf::NatDetectionResponse &response)
        { return NatDetectionRpcs::NatDetectionCallback(
                 transport::kSuccess, response, candidates, callback, transport,
                 message_handler, request, full, index); } );
   //TODO(dirvine)
-  message_handler->on_error()->connect([&]
+  message_handler->on_error()->connect([=]
     (const TransportCondition &result,  const Endpoint &remote_endpoint)
       { return NatDetectionRpcs::NatDetectionCallback(result,
                 protobuf::NatDetectionResponse(), candidates, callback,

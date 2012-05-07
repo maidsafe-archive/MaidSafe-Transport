@@ -53,7 +53,7 @@ const size_t kIterations = 100;
 
 void dispatch_handler(const bs::error_code &ec, RudpMultiplexer *muxer) {
   if (!ec) muxer->AsyncDispatch([&] (const bs::error_code &e) 
-  { return dispatch_handler(ec, muxer); } );
+  { return dispatch_handler(e, muxer); } );
 }
 
 void tick_handler(const bs::error_code &ec, RudpSocket *sock) {
