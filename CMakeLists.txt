@@ -104,7 +104,7 @@ source_group("Test Header Files" FILES ${HEADER_FILES_TEST_TRANSPORT_DIR})
 # Define MaidSafe libraries and executables                                                       #
 ###################################################################################################
 ms_add_static_library(transport ${ALL_FILES})
-ms_add_executable(TESTtransport Tests ${ALL_FILES_TEST_TRANSPORT_DIR})
+ms_add_executable(TESTtransport "Tests/Transport" ${ALL_FILES_TEST_TRANSPORT_DIR})
 # ms_add_executable(TESTnatpmp Tests ${ALL_FILES_TEST_MAIN} ${ALL_FILES_TEST_NATPMP_DIR})
 # ms_add_executable(TESTupnp Tests ${ALL_FILES_TEST_MAIN} ${ALL_FILES_TEST_UPNP_DIR})
 
