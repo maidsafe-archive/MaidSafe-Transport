@@ -70,9 +70,9 @@ void NatDetectionRpcs::DoNatDetection(const std::vector<Contact> &candidates,
        { return NatDetectionRpcs::NatDetectionCallback(
                 transport::kSuccess, response, candidates, callback, transport,
                 message_handler, request, full, index); } );
-  //TODO(dirvine)
+  // TODO(dirvine)
   message_handler->on_error()->connect([=]
-    (const TransportCondition &result,  const Endpoint &remote_endpoint)
+    (const TransportCondition &result, const Endpoint &/*remote_endpoint*/)
       { return NatDetectionRpcs::NatDetectionCallback(result,
                 protobuf::NatDetectionResponse(), candidates, callback,
                 transport, message_handler, request, full, index); } );
