@@ -122,10 +122,10 @@ void RudpTransport::HandleDispatch(MultiplexerPtr multiplexer,
 
 void RudpTransport::StartAccept() {
   ip::udp::endpoint endpoint;  // Endpoint is assigned when socket is accepted.
-  ConnectionPtr connection(std::make_shared<RudpConnection>(shared_from_this(),
-                                                            strand_,
-                                                            multiplexer_,
-                                                            endpoint));
+  ConnectionPtr connection(new RudpConnection(shared_from_this(),
+                                              strand_,
+                                              multiplexer_,
+                                              endpoint));
 
   acceptor_->AsyncAccept(connection->Socket(),
                          strand_.wrap(std::bind(&RudpTransport::HandleAccept,
@@ -199,9 +199,10 @@ void RudpTransport::DoSend(const std::string &data,
     // StartDispatch();
   }
 
-  ConnectionPtr connection(std::make_shared<RudpConnection>(shared_from_this(),
-                                                           strand_,
-                                                           multiplexer_, ep));
+  ConnectionPtr connection(new RudpConnection(shared_from_this(),
+                                              strand_,
+                                              multiplexer_,
+                                              ep));
 
   DoInsertConnection(connection);
   connection->StartSending(data, timeout);
@@ -234,9 +235,10 @@ void RudpTransport::DoConnect(const Endpoint &endpoint,
     // StartDispatch();
   }
 
-  ConnectionPtr connection(std::make_shared<RudpConnection>(shared_from_this(),
-                                                            strand_,
-                                                            multiplexer_, ep));
+  ConnectionPtr connection(new RudpConnection(shared_from_this(),
+                                              strand_,
+                                              multiplexer_,
+                                              ep));
   DoInsertConnection(connection);
   connection->Connect(timeout, callback);
 

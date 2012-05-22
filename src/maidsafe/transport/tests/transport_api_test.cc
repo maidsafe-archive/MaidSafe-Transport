@@ -24,7 +24,7 @@ CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR
 TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
-// TODO(dirvine) - re-enable this, problems with shared_ptr usage and parametisation 
+// TODO(dirvine) - re-enable this, problems with shared_ptr usage and parametisation
 #include "maidsafe/transport/tests/transport_api_test.h"
 #include <functional>
 #ifdef __MSVC__
@@ -42,7 +42,7 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "maidsafe/transport/tcp_transport.h"
 #include "maidsafe/transport/udp_transport.h"
 #include "maidsafe/transport/log.h"
-#if !GTEST_HAS_TYPED_TEST_P 
+#if !GTEST_HAS_TYPED_TEST_P
 #error You require a different version of gtest
 #endif
 namespace bptime = boost::posix_time;
@@ -612,10 +612,10 @@ INSTANTIATE_TYPED_TEST_CASE_P(UDP, TransportAPITest, UdpTransport);
 
 
 TEST_F(RudpSingleTransportAPITest, BEH_BiDirectionCommunicate) {
-  RudpTransportPtr sender(std::make_shared<RudpTransport>(
-      this->asio_services_[0]->service()));
-  RudpTransportPtr listener(std::make_shared<RudpTransport>(
-      this->asio_services_[0]->service()));
+  RudpTransportPtr sender(
+      new RudpTransport(this->asio_services_[0]->service()));
+  RudpTransportPtr listener(
+      new RudpTransport(this->asio_services_[0]->service()));
   EXPECT_EQ(kSuccess, sender->StartListening(Endpoint(kIP, 2000)));
   EXPECT_EQ(kSuccess, listener->StartListening(Endpoint(kIP, 2001)));
   TestMessageHandlerPtr msgh_sender(new TestMessageHandler("Sender"));

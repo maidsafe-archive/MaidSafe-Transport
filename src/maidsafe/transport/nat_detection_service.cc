@@ -102,7 +102,7 @@ void NatDetectionService::NatDetection(
     // Waiting for ProxyConnect Callback to return
     boost::condition_variable condition_variable;
     boost::mutex mutex;
-    TransportPtr transport(std::make_shared<RudpTransport>(asio_service_));
+    std::shared_ptr<RudpTransport> transport(new RudpTransport(asio_service_));
     bool result(false);
     TransportCondition condition;
     boost::signals2::connection proxy_connect =
@@ -208,7 +208,7 @@ void NatDetectionService::ProxyConnect(
                     static_cast<uint16_t> (request.endpoint().port()));
   response->set_result(false);
   std::shared_ptr<RudpTransport> transport(
-      std::make_shared<RudpTransport>(asio_service_));
+      new RudpTransport(asio_service_));
   // TODO(Mahmoud): The IP address should be changed.
   Endpoint listening_endpoint(IP::from_string("127.0.0.1"), 0);
   if (!StartListening(transport, &listening_endpoint)) {

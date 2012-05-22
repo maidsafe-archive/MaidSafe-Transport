@@ -114,8 +114,8 @@ TransportCondition TcpTransport::StartListening(const Endpoint &endpoint) {
   }
 
   ConnectionPtr new_connection(
-      std::make_shared<TcpConnection>(shared_from_this(),
-                                      boost::asio::ip::tcp::endpoint()));
+      new TcpConnection(shared_from_this(),
+                        boost::asio::ip::tcp::endpoint()));
   listening_port_ = acceptor_->local_endpoint().port();
   transport_details_.endpoint.port = listening_port_;
   transport_details_.endpoint.ip = endpoint.ip;
@@ -160,8 +160,8 @@ void TcpTransport::HandleAccept(AcceptorPtr acceptor,
   }
 
   ConnectionPtr new_connection(
-      std::make_shared<TcpConnection>(shared_from_this(),
-                                      boost::asio::ip::tcp::endpoint()));
+      new TcpConnection(shared_from_this(),
+                        boost::asio::ip::tcp::endpoint()));
 
   // The connection object is kept alive in the acceptor handler until
   // HandleAccept() is called.
@@ -185,8 +185,8 @@ void TcpTransport::Send(const std::string &data,
   }
 
   ip::tcp::endpoint tcp_endpoint(endpoint.ip, endpoint.port);
-  ConnectionPtr connection(std::make_shared<TcpConnection>(shared_from_this(),
-                                                           tcp_endpoint));
+  ConnectionPtr connection(new TcpConnection(shared_from_this(),
+                                             tcp_endpoint));
   InsertConnection(connection);
   connection->StartSending(data, timeout);
 }
