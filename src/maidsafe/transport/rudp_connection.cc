@@ -46,7 +46,7 @@ namespace bptime = boost::posix_time;
 namespace args = std::placeholders;
 
 namespace maidsafe {
-
+static int g_rudp_connection(0);
 namespace transport {
 
 RudpConnection::RudpConnection(const std::shared_ptr<RudpTransport> &transport,
@@ -66,9 +66,12 @@ RudpConnection::RudpConnection(const std::shared_ptr<RudpTransport> &transport,
     timeout_for_response_(kMinTimeout),
     timeout_state_(kNoTimeout) {
   static_assert((sizeof(DataSize)) == 4, "DataSize must be 4 bytes.");
+  g_rudp_connection++;
 }
 
-RudpConnection::~RudpConnection() {}
+RudpConnection::~RudpConnection() {
+  DLOG(INFO) << "~RudpConnection()______________________________" << --g_rudp_connection;
+}
 
 RudpSocket &RudpConnection::Socket() {
   return socket_;
@@ -328,7 +331,7 @@ void RudpConnection::HandleReadData(const bs::error_code &ec, size_t length) {
       timer_.expires_from_now(kStallTimeout);
     // If transmission speed is too slow, the socket shall be forced closed
     if (socket_.IsSlowTransmission(length)) {
-      CloseOnError(kReceiveTimeout);
+       return CloseOnError(kReceiveTimeout);
     }
     StartReadData();
   }
@@ -346,10 +349,8 @@ void RudpConnection::DispatchMessage() {
                                                    buffer_.end()),
                                        info, &response,
                                        &response_timeout);
-    if (response.empty()) {
-      Close();
-      return;
-    }
+    if (response.empty())
+      return Close();
 
     EncodeData(response);
     timeout_for_response_ = response_timeout;
@@ -366,8 +367,7 @@ void RudpConnection::EncodeData(const std::string &data) {
     DLOG(ERROR) << "Data size " << msg_size << " bytes (exceeds limit of "
                 << RudpTransport::kMaxTransportMessageSize() << ")"
                 << std::endl;
-    CloseOnError(kMessageSizeTooLarge);
-    return;
+    return CloseOnError(kMessageSizeTooLarge);
   }
 
   buffer_.clear();
@@ -399,7 +399,7 @@ void RudpConnection::HandleWrite(const bs::error_code &ec) {
   if (timeout_for_response_ != kImmediateTimeout) {
     StartReadSize();
   } else {
-    DoClose();
+    return DoClose();
   }
 }
 

@@ -86,7 +86,7 @@ class RudpMultiplexer {
     }
     return kSendFailure;
   }
-
+  int id;
  private:
   friend class RudpAcceptor;
   friend class RudpSocket;
@@ -104,6 +104,7 @@ class RudpMultiplexer {
 
   // Dispatcher keeps track of the active sockets and the acceptor.
   RudpDispatcher dispatcher_;
+
 };
 
 }  // namespace transport
