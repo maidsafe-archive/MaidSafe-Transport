@@ -122,6 +122,8 @@ rename_outdated_built_exes()
 # Set compiler and linker flags                                                                   #
 ###################################################################################################
 include(maidsafe_standard_flags)
+# Require STATICLIB defined for UPnP library
+add_definitions(-DSTATICLIB)
 ms_disable_warnings(${PROJECT_SOURCE_DIR}/src/maidsafe/transport/transport.pb.cc ${ALL_FILES_LIBUPNP_DIR})
 
 
