@@ -134,6 +134,7 @@ add_style_test(${STYLE_TRANSPORT} ${ALL_FILES_TEST_TRANSPORT_DIR})
 add_gtests(TESTtransport)
 # add_gtests(TESTnatpmp)
 # add_gtests(TESTupnp)
+add_project_experimental()
 test_summary_output()
 
 # Remove files from coverage stats
