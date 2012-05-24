@@ -257,13 +257,11 @@ void RudpSocket::HandleReceiveFrom(const asio::const_buffer &data,
       Close();
     } else {
       DLOG(ERROR) << "Socket " << session_.Id()
-                  << " ignoring invalid packet from "
-                  << endpoint << std::endl;
+                  << " ignoring invalid packet from " << endpoint;
     }
   } else {
     DLOG(ERROR) << "Socket " << session_.Id()
-                << " ignoring spurious packet from "
-                << endpoint << std::endl;
+                << " ignoring spurious packet from " << endpoint;
   }
 }
 

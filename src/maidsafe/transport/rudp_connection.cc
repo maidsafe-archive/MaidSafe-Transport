@@ -365,8 +365,7 @@ void RudpConnection::EncodeData(const std::string &data) {
   if (static_cast<size_t>(msg_size) >
           static_cast<size_t>(RudpTransport::kMaxTransportMessageSize())) {
     DLOG(ERROR) << "Data size " << msg_size << " bytes (exceeds limit of "
-                << RudpTransport::kMaxTransportMessageSize() << ")"
-                << std::endl;
+                << RudpTransport::kMaxTransportMessageSize() << ")";
     return CloseOnError(kMessageSizeTooLarge);
   }
 

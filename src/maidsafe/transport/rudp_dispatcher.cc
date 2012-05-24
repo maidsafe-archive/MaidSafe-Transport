@@ -84,7 +84,7 @@ void RudpDispatcher::HandleReceiveFrom(const asio::const_buffer &data,
         acceptor_->HandleReceiveFrom(data, endpoint);
       } else {
         DLOG(ERROR) << "Received a request for a new connection from "
-                    << endpoint << " but there is no acceptor" << std::endl;
+                    << endpoint << " but there is no acceptor";
       }
     } else {
       // This packet is intended for a specific connection.
@@ -96,7 +96,7 @@ void RudpDispatcher::HandleReceiveFrom(const asio::const_buffer &data,
         DLOG(ERROR) << "Received a packet \"0x" << std::hex
                     << static_cast<int>(*p) << std::dec
                     << "\" for unknown connection "
-                    << id << " from " << endpoint << std::endl;
+                    << id << " from " << endpoint;
       }
     }
   }
