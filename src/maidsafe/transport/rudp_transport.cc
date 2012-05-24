@@ -49,17 +49,18 @@ namespace args = std::placeholders;
 namespace maidsafe {
 
 namespace transport {
-
+static int g_rudp_transport(0);
 RudpTransport::RudpTransport(asio::io_service &asio_service)   // NOLINT
   : Transport(asio_service),
     strand_(asio_service),
     multiplexer_(new RudpMultiplexer(asio_service)),
     acceptor_(),
-    connections_() {}
+    connections_() {g_rudp_transport++;}
 
 RudpTransport::~RudpTransport() {
   for (auto it = connections_.begin(); it != connections_.end(); ++it)
     (*it)->Close();
+  DLOG(INFO) << "~RudpTransport()______________________________" << --g_rudp_transport;
 }
 
 TransportCondition RudpTransport::StartListening(const Endpoint &endpoint) {
@@ -102,6 +103,8 @@ void RudpTransport::CloseAcceptor(AcceptorPtr acceptor) {
 }
 
 void RudpTransport::CloseMultiplexer(MultiplexerPtr multiplexer) {
+  DLOG(INFO) << "RudpTransport::CloseMultiplexer!" << multiplexer->id << "count "
+  << multiplexer.use_count();
   multiplexer->Close();
 }
 
@@ -261,12 +264,15 @@ void RudpTransport::RemoveConnection(ConnectionPtr connection) {
 }
 
 void RudpTransport::DoRemoveConnection(ConnectionPtr connection) {
+  DLOG(INFO) << "DoRemoveConnection!!!!!!!!!!!!!!!!!!!!" << connections_.size();
   connections_.erase(connection);
   //  Closing Multiplexer in case this was last connection left in transport.
   if (connections_.empty() && !listening_port_) {
-    if (multiplexer_)
+    if (multiplexer_) {
       strand_.dispatch(std::bind(&RudpTransport::CloseMultiplexer,
                                  multiplexer_));
+      DLOG(INFO) << "CloseMultiplexer!!!!!!!!!!!!!!!!!!!!" << multiplexer_->id;
+    }
     multiplexer_.reset(new RudpMultiplexer(asio_service_));
   }
 }

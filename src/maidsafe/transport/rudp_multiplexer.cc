@@ -41,14 +41,17 @@ namespace bs = boost::system;
 namespace maidsafe {
 
 namespace transport {
-
+static int mux_count(0), idmux(0);
 RudpMultiplexer::RudpMultiplexer(asio::io_service &asio_service) //NOLINT
   : socket_(asio_service),
     receive_buffer_(RudpParameters::max_size),
     sender_endpoint_(),
-    dispatcher_() {}
+    dispatcher_(), id(++idmux) {
+  DLOG(INFO) << "RudpMultiplexer()______"<< id << "________________________" << mux_count++;
+}
 
 RudpMultiplexer::~RudpMultiplexer() {
+  DLOG(INFO) << "~RudpMultiplexer()___________"<< id << "___________________" << mux_count--;
 }
 
 TransportCondition RudpMultiplexer::Open(const ip::udp &protocol) {
