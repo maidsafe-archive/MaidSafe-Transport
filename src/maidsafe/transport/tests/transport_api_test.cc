@@ -131,7 +131,7 @@ void TestMessageHandler::DoTimeOutOnRequestReceived(const std::string &request,
                                                     const Info &info,
                                                     std::string *response,
                                                     Timeout *timeout) {
-  DLOG(INFO) << "Mocking a timedout response" << std::endl;
+  DLOG(INFO) << "Mocking a timedout response";
   boost::mutex::scoped_lock lock(mutex_);
   requests_received_.push_back(std::make_pair(request, info));
   *response = "Timed out reply to " + request + " (Id = " +
