@@ -670,7 +670,7 @@ TEST_F(RudpSingleTransportAPITest, BEH_BiDirectionCommunicate) {
   listener->StopListening();
   sender->StopListening();
 }
-/*
+
 TEST_F(RudpSingleTransportAPITest, BEH_BiDirectionDuplexCommunicate) {
   // 8MB data to be sent both from client to server and server to client
   // simultaneously
@@ -1017,7 +1017,7 @@ TEST_F(RudpSingleTransportAPITest, BEH_SlowReceiveSpeed) {
   transport_container.reset();
   listener->StopListening();
   RestoreRudpGlobalSettings();
-}*/
+}
 
 INSTANTIATE_TEST_CASE_P(ConfigurableTraffic, RudpConfigurableTransportAPITest,
                         testing::Range(0, 3));

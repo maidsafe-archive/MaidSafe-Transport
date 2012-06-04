@@ -52,12 +52,12 @@ const size_t kBufferSize = 1024 * 1024;
 const size_t kIterations = 100;
 
 void dispatch_handler(const bs::error_code &ec, RudpMultiplexer *muxer) {
-  if (!ec) muxer->AsyncDispatch([&] (const bs::error_code &e) 
+  if (!ec) muxer->AsyncDispatch([=] (const bs::error_code &e)
   { return dispatch_handler(e, muxer); } );
 }
 
 void tick_handler(const bs::error_code &ec, RudpSocket *sock) {
-  if (!ec) sock->AsyncTick([&] (const bs::error_code &ec)
+  if (!ec) sock->AsyncTick([=] (const bs::error_code &ec)
                     { tick_handler(ec, sock); } );
 }
 
@@ -65,7 +65,7 @@ void handler1(const bs::error_code &ec, bs::error_code *out_ec) {
   *out_ec = ec;
 }
 
-TEST(RudpSocketTest, BEH_Socket) {
+TEST(RudpSocketTest, FUNC_Socket) {
   asio::io_service io_service;
   bs::error_code server_ec;
   bs::error_code client_ec;
