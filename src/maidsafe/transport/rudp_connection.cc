@@ -170,8 +170,14 @@ void RudpConnection::CheckTimeout(const bs::error_code &ec) {
 
   // If the socket is closed, it means the connection has been shut down.
   if (!socket_.IsOpen()) {
-    if (timeout_state_ == kSending)
+    if (timeout_state_ == kSending) {
       CloseOnError(kSendStalled);
+    }
+    else if (timeout_state_ == kReceiving) {
+      CloseOnError(kReceiveFailure);
+    } else {
+      CloseOnError(kError);
+    }
     return;
   }
 
