@@ -61,7 +61,7 @@ class Protocol {
 /**
   * Supported protocols.
   */
-  enum { kTcp = 1, kUdp = 2 };
+  enum { kUdp = 1, kTcp = 2 };
 
 /**
   * Result opcodes.
